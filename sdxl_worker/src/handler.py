@@ -1,6 +1,6 @@
 import runpod
 import torch
-from diffusers import AutoPipelineForText2Image
+from diffusers.pipelines.auto_pipeline import AutoPipelineForText2Image
 from PIL import Image
 from io import BytesIO
 import base64

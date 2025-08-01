@@ -1,0 +1,12 @@
+name: Docs
+version: 0.0.1
+schema: v1
+prompts:
+  - name: HFDocs
+    description: New prompt
+    prompt: | 
+      IMPORTANT: DO NOT CALL ANY OTHER COMMANDS OTHER THAN THOSE THAT ARE SPECIFIED IN THE FOLLOWING STEPS:
+      1. Create a new git branch called add_docs/hf_diffusers.
+      2. Then run git clone git@github.com:huggingface/diffusers.git here, and once that is downloaded, copy the contents of the docs/source/en folder into a new folder called docs/hf_diffusers in this workspace, then delete the diffusers folder that was just downloaded by git.
+      3. Then find _toctree.yml in the docs/hf_diffusers folder and write a reference to it under the # Documentation section in .continue/rules/CONTINUE.md. If .continue/rules/CONTINUE.md does not exist, create it.
+      4. Then add and commit the changes to the new branch with a commit message. 

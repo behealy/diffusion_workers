@@ -1,19 +1,15 @@
-# Use an official Python runtime as a parent image
-FROM python:3.10-slim
+FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
 
-# Set working directory
-WORKDIR /
+RUN apt-get update && apt-get install -y wget
 
-# Install system dependencies (e.g., for GPU support)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends libgl1 libglib2.0-0
+# Install uv
+RUN wget -qO- https://astral.sh/uv/install.sh | sh && source $HOME/.local/bin/env
 
-# Install Python dependencies
-RUN pip install --no-cache-dir runpod diffusers torch torchvision pillow
 
-# Copy your handler file to the container
-COPY rp_handler.py /rp_handler.py
-COPY test_input.json /test_input.json
+COPY pyproject.toml /pyproject.toml
+COPY requirements.txt /requirements.txt
+COPY src /src
+RUN uv install -r /requirements.txt
 
 # Start the serverless handler
-CMD ["python3", "-u", "/rp_handler.py"]
+CMD ["uv", "run", "/src/handler.py"]

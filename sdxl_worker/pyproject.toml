@@ -1,11 +1,12 @@
 [project]
-name = "sdxl-workers"
+name = "sdxl-worker"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "diffusers[torch]>=0.34.0",
+    "pydantic>=2.11.7",
     "runpod>=1.7.13",
-    "transformers>=4.54.0",
+    "transformers>=4.54.1",
 ]
