@@ -118,3 +118,91 @@ Extensive HuggingFace Diffusers documentation is included in `docs/hf_diffusers/
 - Hardware acceleration options
 
 Reference the `.continue/rules/CONTINUE.md` file for additional development context and documentation links.
+
+
+# Clean code guide
+
+## ✨ 1. **Meaningful Names**
+
+* Use **descriptive, unambiguous names**.
+
+  * ✅ `get_user_email()`
+  * ❌ `getData()`
+* Avoid abbreviations and encode no metadata (`user_age`, not `ua`).
+
+---
+
+## 📦 2. **Small Functions**
+
+* Functions should be **small** and **do one thing**.
+* Prefer **descriptive names** over long comments.
+* Limit parameters (ideally ≤ 3).
+* Extract logic into helper functions when needed.
+
+---
+
+## 🧱 3. **Single Responsibility Principle (SRP)**
+
+* Each **function/class/module** should have **only one reason to change**.
+* Don't mix concerns (e.g., don't fetch and format data in the same function).
+
+---
+
+## 📐 4. **Consistent Formatting**
+
+* Use a linter/formatter (`black`, `prettier`, etc.).
+* Maintain consistent **indentation, spacing, and brace styles**.
+* Group related code visually.
+
+---
+
+## 🧹 5. **Avoid Code Smells**
+
+* Don't use magic numbers or strings (use constants).
+* Don’t repeat yourself (**DRY** principle).
+* Don’t comment out code; use version control.
+
+---
+
+## 💬 6. **Comments (Use Sparingly)**
+
+* Write code that **doesn’t need comments**.
+* When used, comments should explain **why**, not what.
+* Update or remove outdated comments.
+
+---
+
+## 🧪 7. **Write Tests**
+
+* Write **unit tests** for logic-heavy code.
+* Follow **Arrange-Act-Assert** pattern in tests.
+* Test edge cases and failure modes.
+
+---
+
+## 🧰 8. **Use Exceptions, Not Error Codes**
+
+* Handle errors with **exceptions**, not return values.
+* Catch exceptions close to where they can be handled meaningfully.
+
+---
+
+## 🧼 9. **Keep Code Simple**
+
+* Favor clarity over cleverness.
+* Don’t over-abstract prematurely (YAGNI: *You Ain’t Gonna Need It*).
+* Reduce nested blocks and deep indentation.
+
+---
+
+## 📦 10. **Organize Code Logically**
+
+* Group related functions together.
+* Keep public interfaces small and minimal.
+* Use directories and modules to logically separate components.
+
+---
+
+## 🧠 Clean Code Philosophy
+
+> "Clean code is simple and direct. Clean code reads like well-written prose." — *Robert C. Martin*
