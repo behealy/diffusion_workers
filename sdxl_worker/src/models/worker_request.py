@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional
 from dataclasses import dataclass
 from PIL.Image import Image
@@ -11,7 +11,7 @@ from PIL.Image import Image
 # 5 -- segment
 @dataclass
 class ControlNetParams(BaseModel):
-    control_image: Image
+    control_image: str
     model: str | None = Field(default=None)
     controlnet_conditioning_scale: float = Field(default=0.0)
     control_guidance_end: float = Field(default=1.0)
@@ -25,21 +25,35 @@ class LoraParams(BaseModel):
     weight_name: str
 
 @dataclass
+class InpaintParams(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    starting_image: str
+    mask_image: str
+    use_controlnet_union_inpaint: bool = Field(default=False)
+
+@dataclass
+class ImageToImageParams(BaseModel):
+    starting_image: str
+
+@dataclass
 class InputParams(BaseModel):
     """
     Parameters for the input.
     """
     prompt: str
+    starting_image: str | None = None
     negative_prompt: Optional[str] = None
-    model: Optional[str] = None
+    base_model: Optional[str] = None
     guidance_scale: Optional[float] = None
-    num_inference_steps: Optional[int] = None
+    inference_steps: Optional[int] = None
     seed: Optional[int] = None
     dimensions: Optional[List[int]] = None
+    inpaint: Optional[InpaintParams] = None 
+    image_to_image: Optional[ImageToImageParams] = None
     controlnets: Optional[List[ControlNetParams]] = None
     loras: Optional[List[LoraParams]] = None
 
-class GenerateRequest(BaseModel):
+class WorkerRequest(BaseModel):
     """
     Request model for generation.
     """
