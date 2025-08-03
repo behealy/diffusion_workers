@@ -1,4 +1,8 @@
 import torch
+import base64
+from diffusers.utils import load_image
+from io import BytesIO
+from PIL import Image
 
 def resolve_device():
     if torch.cuda.is_available():
@@ -29,4 +33,13 @@ def get_memory_info():
 def print_memory_info():
     print(get_memory_info())
 
-   
+def load_image(image: str):
+    if image.startswith("data:image"):
+        try: 
+            return Image.open(BytesIO(base64.b64decode(image)))
+        except Exception as e:
+            print(f"Error loading image from data URL: {e}")
+            raise e
+    else:
+        return load_image(image)
+            

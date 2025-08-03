@@ -10,11 +10,12 @@ import runpod
 import uvicorn
 from fastapi import FastAPI, HTTPException, responses
 from pipelinewrapper import PipelineWrapper, SdxlControlnetUnionPipelineWrapper
+from controlnet_preprocessor import ControlnetSetupHandler
 from utils import get_memory_info, print_memory_info, resolve_device
 
-from models.worker_request import ControlNetParams, LoraParams, WorkerRequest, InputParams
+from models import ControlNetParams, LoraParams, OpStatus, WorkerRequest, InputParams
 
-class DiffusionService:
+class DiffusionService(ControlnetSetupHandler):
     def __init__(
             self, 
             pipeline_wrapper: PipelineWrapper,
@@ -22,24 +23,6 @@ class DiffusionService:
         ):
        self.pipeline_wrapper = pipeline_wrapper
        self.local_debug = local_debug
-
-    def _unload_all_loras(self, pipeline):
-        """Unload all LoRA weights from the pipeline to restore original model weights."""
-        try:
-            pipeline.unload_lora_weights()
-        except Exception as e:
-            print(f"Warning: Failed to unload LoRA weights: {e}")
-
-
-    def _setup_single_controlnet(self, controlnets: List[ControlNetParams]):
-          # Single ControlNet
-            cn = controlnets[0]            
-            return {
-                "image": cn.control_image,
-                "controlnet_conditioning_scale": cn.controlnet_conditioning_scale,
-                "control_guidance_start": cn.control_guidance_start,
-                "control_guidance_end": cn.control_guidance_end
-            }
 
     def generate(
         self,
@@ -56,15 +39,15 @@ class DiffusionService:
 
             loras = input_params.loras
             prompt = input_params.prompt
-            warnings = {}
+            warnings = []
 
             # Start fresh - unload any existing LoRAs from the base pipeline
             self.pipeline_wrapper.unload_loras()
             kwargs = {}
             if loras and len(loras) > 0:
                 res = self.pipeline_wrapper.load_loras(loras)
-                if (res["status"] == "error"):
-                    warnings = {**res}
+                if (res.status is OpStatus.FAILURE):
+                    warnings = [*warnings, res]
                 kwargs = { **kwargs, "cross_attention_kwargs": {"scale": loras[0].scale}}
                 for lora in loras:
                     if lora.tag is not None:
@@ -72,15 +55,16 @@ class DiffusionService:
                
             pipe = self.pipeline_wrapper.get_pipeline_for_inputs(input_params)
           
-            # Controlnets config
             if controlnets and len(controlnets) > 0:
-                kwargs = {**kwargs, **self._setup_single_controlnet(controlnets)}
-                
+                res = self.get_controlnet_args(input_params)
+                if res.status is not OpStatus.FAILURE and res.result is not None:
+                    kwargs = {**kwargs, **res.result}
+                else: 
+                    warnings = [*warnings, res]      
 
             print_memory_info()
 
-            # Set up generator for reproducibility
-            generator = generator = torch.Generator(device=resolve_device()).manual_seed(seed)
+            generator = torch.Generator(device=resolve_device()).manual_seed(seed)
 
             # Generate image
             result = pipe(

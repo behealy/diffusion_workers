@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
 import os
 from typing import Any, Callable, Dict, List, Optional
+from regex import R
 import torch
 from attr import dataclass
 from itsdangerous import NoneAlgorithm
 from pydantic import NonNegativeFloat
-from models.worker_request import ControlNetParams, LoraParams, InputParams
+from models import ControlNetParams, LoraParams, InputParams
 from diffusers import (
     AutoPipelineForText2Image,
     ControlNetUnionModel,
@@ -13,6 +14,7 @@ from diffusers import (
     AutoPipelineForImage2Image,
     AutoPipelineForInpainting,
 )
+from models import OpResult, OpStatus
 from utils import resolve_device
 from dataclasses import dataclass
 
@@ -22,7 +24,7 @@ class PipelineWrapper(ABC):
         pass
   
     @abstractmethod
-    def load_loras(self, loras: List[LoraParams]) -> dict[str, str]:
+    def load_loras(self, loras: List[LoraParams]) -> OpResult:
         pass
 
     @abstractmethod
@@ -101,7 +103,7 @@ class SdxlControlnetUnionPipelineWrapper(PipelineWrapper):
             self.pipelines.base_pipeline.unet = torch.compile(self.pipelines.base_pipeline.unet, mode="reduce-overhead", fullgraph=True)
         
 
-    def load_loras(self, loras: List[LoraParams]):
+    def load_loras(self, loras: List[LoraParams]) -> OpResult:
         """Load LoRA weights into the pipeline."""
         for lora in loras:
             try:
@@ -111,12 +113,12 @@ class SdxlControlnetUnionPipelineWrapper(PipelineWrapper):
                     weight_name=lora.weight_name,
                     adapter_name=adapter_name
                 )
-                return {"status": "success", "message": f"LoRA {lora.model} loaded successfully"}
+                return OpResult(operation="LoRA Load", status=OpStatus.SUCCESS, message=f"LoRA {lora.model} loaded successfully")
             except Exception as e:
                 message = f"Failed to load LoRA {lora.model}: {e}"
                 print(message)
-                return {"status": "error", "message": message}
-        return {"status": "success", "message": "no LoRas"}
+                return OpResult(operation="LoRA Load", status=OpStatus.FAILURE, message=message)
+        return OpResult(operation="LoRA Load", status=OpStatus.FAILURE, message="no LoRAs to load")
 
     def unload_loras(self):
         """Unload all LoRA weights from the pipeline to restore original model weights."""
