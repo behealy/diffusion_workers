@@ -1,24 +1,14 @@
 import datetime
 import torch
+import random
 from typing import List, Optional, Dict, Any
-from diffusers import (
-    AutoPipelineForText2Image,
-    StableDiffusionXLPipeline,
-    StableDiffusionXLControlNetPipeline,
-    StableDiffusionXLControlNetUnionPipeline,
-    ControlNetUnionModel,
-    DDIMScheduler,
-    EulerDiscreteScheduler,
-    AutoPipelineForImage2Image,
-    AutoPipelineForInpainting,
-)
 from diffusers.models.controlnets.controlnet import ControlNetModel
 from PIL import Image
 from io import BytesIO
 import base64
 import runpod
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, responses
 from pipelinewrapper import PipelineWrapper, SdxlControlnetUnionPipelineWrapper
 from utils import get_memory_info, print_memory_info, resolve_device
 
@@ -58,53 +48,68 @@ class DiffusionService:
         """Generate an image based on the provided parameters."""
         try:
             controlnets = input_params.controlnets
-            seed = input_params.seed
+
+            if input_params.seed is not None:
+                seed = input_params.seed
+            else: 
+                seed = random.getrandbits(64)
+
             loras = input_params.loras
+            prompt = input_params.prompt
+            warnings = {}
+
             # Start fresh - unload any existing LoRAs from the base pipeline
             self.pipeline_wrapper.unload_loras()
+            kwargs = {}
             if loras and len(loras) > 0:
-                self.pipeline_wrapper.load_loras(loras)
+                res = self.pipeline_wrapper.load_loras(loras)
+                if (res["status"] == "error"):
+                    warnings = {**res}
+                kwargs = { **kwargs, "cross_attention_kwargs": {"scale": loras[0].scale}}
+                for lora in loras:
+                    if lora.tag is not None:
+                         prompt += f"{prompt}, {lora.tag}"
+               
             pipe = self.pipeline_wrapper.get_pipeline_for_inputs(input_params)
           
             # Controlnets config
             if controlnets and len(controlnets) > 0:
-                controlnet_kwargs = self._setup_single_controlnet(controlnets)
-            else:
-                controlnet_kwargs = {}
+                kwargs = {**kwargs, **self._setup_single_controlnet(controlnets)}
+                
 
             print_memory_info()
 
             # Set up generator for reproducibility
-            generator = None
-            if seed is not None:
-                generator = torch.Generator(device=resolve_device()).manual_seed(seed)
+            generator = generator = torch.Generator(device=resolve_device()).manual_seed(seed)
 
             # Generate image
             result = pipe(
-                prompt=input_params.prompt,
+                prompt=prompt,
                 negative_prompt=input_params.negative_prompt,
                 num_inference_steps=input_params.inference_steps,
                 guidance_scale=input_params.guidance_scale,
                 generator=generator,
-                **controlnet_kwargs
+                **kwargs
             )
 
             image = result.images[0]
 
+            response = {"prompt": prompt, "seed": seed, "warnings": warnings}
+
             if self.local_debug:
                 print("Local debug enabled. Saving image to file.")
+                print(kwargs)
                 # image saved with output timestamp
                 timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
                 filename = f"output_{timestamp}.png"
                 image.save(filename)
-                return {"status": f"Output saved to {filename}"}
+                return {"status": "success", "image": filename, **response}
             else: 
                 # Convert to base64
                 buffer = BytesIO()
                 image.save(buffer, format="PNG")
                 img_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
-
-            return {"image": img_str}
+                return {"image": img_str, **response}
 
         except Exception as e:
             if self.local_debug:

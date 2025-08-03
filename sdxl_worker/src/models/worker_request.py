@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field
-from typing import List, Optional
+from typing import Dict, List, Optional
 from dataclasses import dataclass
 from PIL.Image import Image
 
@@ -23,6 +23,8 @@ class ControlNetParams(BaseModel):
 class LoraParams(BaseModel):
     model: str
     weight_name: str
+    tag: Optional[str] = None
+    scale: float | Dict[str, float] = Field(default=0.8)
 
 @dataclass
 class InpaintParams(BaseModel):
