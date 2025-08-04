@@ -69,6 +69,8 @@ class DiffusionService(ControlnetSetupHandler):
             # Generate image
             result = pipe(
                 prompt=prompt,
+                height=input_params.dimensions[0],
+                width=input_params.dimensions[1],
                 negative_prompt=input_params.negative_prompt,
                 num_inference_steps=input_params.inference_steps,
                 guidance_scale=input_params.guidance_scale,
