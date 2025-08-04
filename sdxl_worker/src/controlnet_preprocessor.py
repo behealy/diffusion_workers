@@ -3,7 +3,7 @@ import os
 from PIL.Image import Image
 
 from controlnet_aux.processor import Processor
-from models import InputParams, OpResult, OpStatus, CNProcessorType, CNUnionControlMode, ControlNetParams
+from models import ImageGenerationParams, OpResult, OpStatus, CNProcessorType, CNUnionControlMode, ControlNetParams
 from utils import load_image
 
 
@@ -51,7 +51,7 @@ class ControlnetSetupHandler:
         """Return a list of available ControlNet processors."""
         return ControlnetSetupHandler.processor_list
 
-    def get_controlnet_args(self, input: InputParams, **kwargs) -> OpResult[dict]:
+    def get_controlnet_args(self, input: ImageGenerationParams, **kwargs) -> OpResult:
         """Process an image using the selected ControlNet processor."""
         if not input.controlnets:
             return OpResult(operation=self.op_tag, status=OpStatus.SUCCESS, message="No controlnets provided.")

@@ -13,7 +13,7 @@ from pipelinewrapper import PipelineWrapper, SdxlControlnetUnionPipelineWrapper
 from controlnet_preprocessor import ControlnetSetupHandler
 from utils import get_memory_info, print_memory_info, resolve_device
 
-from models import ControlNetParams, LoraParams, OpStatus, WorkerRequest, InputParams
+from models import ControlNetParams, LoraParams, OpStatus, ImageGenerateRequest, ImageGenerationParams
 
 class DiffusionService(ControlnetSetupHandler):
     def __init__(
@@ -26,7 +26,7 @@ class DiffusionService(ControlnetSetupHandler):
 
     def generate(
         self,
-        input_params: InputParams,
+        input_params: ImageGenerationParams,
     ) -> Dict[str, Any]:
         """Generate an image based on the provided parameters."""
         try:
@@ -124,8 +124,8 @@ if __name__ == "__main__":
         local_debug=True
     )
 
-    @app.post("/generate")
-    async def generate_image(request: WorkerRequest):
+    @app.post("/generate-sync")
+    async def generate_image(request: ImageGenerateRequest):
         """Generate an image from text prompt."""
         try:
             result = diff_service.generate(

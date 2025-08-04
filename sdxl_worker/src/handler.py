@@ -1,7 +1,7 @@
 from pydantic import ValidationError
 import runpod
 
-from sdxl_worker.src.models.worker_request import WorkerRequest, InputParams
+from models import ImageGenerateRequest, ImageGenerationParams
 from .diffusion_service import DiffusionService
 from .pipelinewrapper import SdxlControlnetUnionPipelineWrapper
 
@@ -13,7 +13,7 @@ def runpod_handler(job):
 
         # Validate input using Pydantic
         try:
-            request = WorkerRequest(input=InputParams(**input_data))
+            request = ImageGenerateRequest(input=ImageGenerationParams(**input_data))
         except ValidationError as e:
             return {"error": f"Invalid input: {str(e)}"}
 

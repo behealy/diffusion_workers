@@ -6,7 +6,7 @@ import torch
 from attr import dataclass
 from itsdangerous import NoneAlgorithm
 from pydantic import NonNegativeFloat
-from models import ControlNetParams, LoraParams, InputParams
+from models import ControlNetParams, LoraParams, ImageGenerationParams
 from diffusers import (
     AutoPipelineForText2Image,
     ControlNetUnionModel,
@@ -20,7 +20,7 @@ from dataclasses import dataclass
 
 class PipelineWrapper(ABC):
     @abstractmethod
-    def get_pipeline_for_inputs(self, params: InputParams) -> Callable:
+    def get_pipeline_for_inputs(self, params: ImageGenerationParams) -> Callable:
         pass
   
     @abstractmethod
@@ -113,12 +113,12 @@ class SdxlControlnetUnionPipelineWrapper(PipelineWrapper):
                     weight_name=lora.weight_name,
                     adapter_name=adapter_name
                 )
-                return OpResult(operation="LoRA Load", status=OpStatus.SUCCESS, message=f"LoRA {lora.model} loaded successfully")
+                return OpResult(operation="LoRA Load", status=OpStatus.SUCCESS, message=f"LoRA {lora.model} loaded successfully", result=None)
             except Exception as e:
                 message = f"Failed to load LoRA {lora.model}: {e}"
                 print(message)
-                return OpResult(operation="LoRA Load", status=OpStatus.FAILURE, message=message)
-        return OpResult(operation="LoRA Load", status=OpStatus.FAILURE, message="no LoRAs to load")
+                return OpResult(operation="LoRA Load", status=OpStatus.FAILURE, message=message, result=None)
+        return OpResult(operation="LoRA Load", status=OpStatus.FAILURE, message="no LoRAs to load",  result=None)
 
     def unload_loras(self):
         """Unload all LoRA weights from the pipeline to restore original model weights."""
@@ -129,7 +129,7 @@ class SdxlControlnetUnionPipelineWrapper(PipelineWrapper):
             print(f"Warning: Failed to unload LoRA weights: {e}")
       
 
-    def get_pipeline_for_inputs(self, params: InputParams) -> Callable:
+    def get_pipeline_for_inputs(self, params: ImageGenerationParams) -> Callable:
         need_i2i = params.starting_image is not None
         need_controlnet = params.controlnets is not None and len(params.controlnets) > 0
         if need_i2i:
