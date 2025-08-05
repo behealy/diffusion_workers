@@ -1,3 +1,5 @@
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -120,6 +122,10 @@ ipython_config.py
 #pdm.toml
 .pdm-python
 .pdm-build/
+
+server/test_inputs/
+
+openapi/clients/
 
 # pixi
 #   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.

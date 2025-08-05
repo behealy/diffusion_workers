@@ -5,7 +5,6 @@ RUN apt-get update && apt-get install -y wget
 # Install uv
 RUN wget -qO- https://astral.sh/uv/install.sh | sh && source $HOME/.local/bin/env
 
-
 COPY pyproject.toml /pyproject.toml
 COPY requirements.txt /requirements.txt
 COPY src /src

@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: SDXL Worker API
+  title: Mooove Diffusion API
   description: |
-    SDXL Image Generation API for RunPod serverless workers.
+    Generative Diffusion Generation API .
     
     This API provides image generation capabilities using Stable Diffusion XL (SDXL) models with support for:
     - Text-to-Image generation
@@ -224,6 +224,27 @@ components:
           items:
             $ref: '#/components/schemas/LoraParams'
           nullable: true
+        pipeline_optimizations:
+          type: object
+          description: List of diffusion pipeline optimization configurations
+          properties:
+            use_deepcache:
+              type: boolean
+              default: false
+              example: false
+            deepcache_interval:
+              type: integer
+              default: 3
+              example: 3
+            deepcache_branch_id:
+              type: integer
+              default: 1
+              example: 0
+            use_torch_compile: 
+              type: boolean
+              default: false
+              example: false
+            
 
     ControlNetParams:
       type: object

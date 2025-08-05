@@ -1,5 +1,5 @@
 [project]
-name = "sdxl-worker"
+name = "mooove-server"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
@@ -13,4 +13,9 @@ dependencies = [
     "uvicorn>=0.20.0",
     "peft>=0.17.0",
     "controlnet-aux>=0.0.10",
+    "deepcache>=0.1.1",
+    "mooove-server-api",
 ]
+
+[tool.uv.sources]
+mooove-server-api = { path = "openapi/dist/mooove_server_api-1.0.0-py3-none-any.whl" }

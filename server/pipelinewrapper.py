@@ -98,6 +98,15 @@ class SdxlControlnetUnionPipelineWrapper(PipelineWrapper):
        
         self.pipelines.base_pipeline.scheduler = DDIMScheduler.from_config(self.pipelines.base_pipeline.scheduler.config)
 
+        # Optimizations
+        from DeepCache import DeepCacheSDHelper
+        helper = DeepCacheSDHelper(pipe=self.pipelines.base_pipeline)
+        helper.set_params(
+            cache_interval=3,
+            cache_branch_id=1,
+        )
+        helper.enable()
+
         # check env var DO_TORCH_COMPILE 
         if os.getenv("DO_TORCH_COMPILE") and torch.cuda.is_available(): 
             self.pipelines.base_pipeline.unet = torch.compile(self.pipelines.base_pipeline.unet, mode="reduce-overhead", fullgraph=True)
