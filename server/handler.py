@@ -1,7 +1,7 @@
 from pydantic import ValidationError
 import runpod
 
-from models import ImageGenerateRequest, ImageGenerationParams
+from mooove_server_api import ImageGenerateRequest, ImageGenerationParams
 from .diffusion_service import DiffusionService
 from .pipelinewrapper import SdxlControlnetUnionPipelineWrapper
 

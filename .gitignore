@@ -9,6 +9,8 @@ CLAUDE.md
 */CLAUDE.md
 .continue/
 
+server/model_loading
+
 # C extensions
 *.so
 

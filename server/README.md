@@ -21,20 +21,10 @@ cd sdxl_worker
 uv run src/piperunner.py --mode server --port 8000
 ```
 
-Test the API:
+#### Test the API:
 
 ```bash
-curl -X POST "http://localhost:8000/generate" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "input": {
-      "prompt": "A beautiful sunset over mountains, highly detailed, 8k",
-      "negative_prompt": "blurry, low quality",
-      "num_inference_steps": 25,
-      "guidance_scale": 7.5,
-      "seed": 12345
-    }
-  }'
+curl -X POST http://localhost:8000/generate-sync -H "Content-Type: application/json" -d @server/test_inputs/test_data.json
 ```
 
 ### RunPod Deployment

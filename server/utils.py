@@ -1,6 +1,8 @@
+from functools import lru_cache
+from mooove_server_api import ImageGenerationParams
 import torch
 import base64
-from diffusers.utils import load_image
+from diffusers.utils import load_image as hf_load_image
 from io import BytesIO
 from PIL import Image
 
@@ -33,13 +35,30 @@ def get_memory_info():
 def print_memory_info():
     print(get_memory_info())
 
-def load_image(image: str):
+def __loadim(image: str):
     if image.startswith("data:image"):
         try: 
-            return Image.open(BytesIO(base64.b64decode(image)))
+            return Image.open(BytesIO(base64.b64decode(image.split(",")[1])))
         except Exception as e:
             print(f"Error loading image from data URL: {e}")
             raise e
     else:
-        return load_image(image)
+        return hf_load_image(image)
+
+def load_image_from_base64_or_url(image: str, resizedWidth: int | None = None, resizedHeight: int | None = None):
+    img = __loadim(image)
+    if resizedWidth and resizedHeight:
+        return img.resize((resizedWidth, resizedHeight))
+    if resizedWidth:
+        (width, height) = img.size
+        scale = resizedWidth/width
+        return img.resize((resizedWidth, int(height * scale)))
+    elif resizedHeight:
+        (width, height) = img.size
+        scale = resizedHeight/height
+        return img.resize((int(width * scale), height))
+    else:
+        return img
+    
+    
             

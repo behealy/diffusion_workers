@@ -1,4 +1,6 @@
 import datetime
+from enum import Enum
+import os
 import torch
 import random
 from typing import List, Optional, Dict, Any
@@ -9,13 +11,14 @@ import base64
 import runpod
 import uvicorn
 from fastapi import FastAPI, HTTPException, responses
-from pipelinewrapper import PipelineWrapper, SdxlControlnetUnionPipelineWrapper
-from controlnet_preprocessor import ControlnetSetupHandler
-from utils import get_memory_info, print_memory_info, resolve_device
+from pipelinewrapper import PipelineWrapper, SD15PipelineWrapper, SdxlControlnetUnionPipelineWrapper
+from controlnet_preprocessor import ControlnetSetupHandler, ControlnetUnionSetupHandler
+from utils import get_memory_info, load_image_from_base64_or_url, print_memory_info, resolve_device
+from mooove_server_api import ImageGenerateRequest, ImageGenerationParams
+from models import OpStatus
+# from preload import load_models_from_manifest
 
-from models import ControlNetParams, LoraParams, OpStatus, ImageGenerateRequest, ImageGenerationParams
-
-class DiffusionService(ControlnetSetupHandler):
+class DiffusionService:
     def __init__(
             self, 
             pipeline_wrapper: PipelineWrapper,
@@ -23,6 +26,8 @@ class DiffusionService(ControlnetSetupHandler):
         ):
        self.pipeline_wrapper = pipeline_wrapper
        self.local_debug = local_debug
+       self.t2i_cnunion_handler = ControlnetUnionSetupHandler()
+       self.t2i_cn_handler = ControlnetSetupHandler()
 
     def generate(
         self,
@@ -40,10 +45,11 @@ class DiffusionService(ControlnetSetupHandler):
             loras = input_params.loras
             prompt = input_params.prompt
             warnings = []
+            response = {"prompt": prompt, "seed": seed}
 
             # Start fresh - unload any existing LoRAs from the base pipeline
             self.pipeline_wrapper.unload_loras()
-            kwargs = {}
+            kwargs = {**input_params.dimensions.to_dict()}
             if loras and len(loras) > 0:
                 res = self.pipeline_wrapper.load_loras(loras)
                 if (res.status is OpStatus.FAILURE):
@@ -56,21 +62,30 @@ class DiffusionService(ControlnetSetupHandler):
             pipe = self.pipeline_wrapper.get_pipeline_for_inputs(input_params)
           
             if controlnets and len(controlnets) > 0:
-                res = self.get_controlnet_args(input_params)
+                res = self.t2i_cn_handler.get_controlnet_args(input_params)
                 if res.status is not OpStatus.FAILURE and res.result is not None:
                     kwargs = {**kwargs, **res.result}
                 else: 
+                    print(f"ControlNet error: {res.message}")
                     warnings = [*warnings, res]      
 
             print_memory_info()
 
+            print(kwargs)
             generator = torch.Generator(device=resolve_device()).manual_seed(seed)
 
+            if input_params.starting_image: 
+                img = load_image_from_base64_or_url(input_params.starting_image, input_params.dimensions.width, input_params.dimensions.height)
+                (width, height) = img.size
+                buffer = BytesIO()
+                img.save(buffer, format="JPEG")
+                img_str = "data:image/jpeg;base64,"+ base64.b64encode(buffer.getvalue()).decode("utf-8")
+                response = { "resized_preview": img_str, **response}
+                kwargs = {"image": img, "width": width, "height": height, **kwargs}
+            
             # Generate image
             result = pipe(
                 prompt=prompt,
-                height=input_params.dimensions[0],
-                width=input_params.dimensions[1],
                 negative_prompt=input_params.negative_prompt,
                 num_inference_steps=input_params.inference_steps,
                 guidance_scale=input_params.guidance_scale,
@@ -80,7 +95,7 @@ class DiffusionService(ControlnetSetupHandler):
 
             image = result.images[0]
 
-            response = {"prompt": prompt, "seed": seed, "warnings": warnings}
+            response = {"warnings": warnings, **response}
 
             if self.local_debug:
                 print("Local debug enabled. Saving image to file.")
@@ -111,6 +126,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run SDXL inference pipeline")
     parser.add_argument("--host", default="0.0.0.0", help="Host for local server")
     parser.add_argument("--port", default=8000, type=int, help="Port for local server")
+    parser.add_argument("--sd_model_version", default="sd15")
+    parser.add_argument("--default_controlnet_model", default="lllyasviel/sd-controlnet-openpose")
     parser.add_argument("--model", default="stable-diffusion-v1-5/stable-diffusion-v1-5", 
                        help="Base model path or identifier")
     
@@ -119,8 +136,15 @@ if __name__ == "__main__":
     # FastAPI app for local development
     app = FastAPI(title="SDXL Worker", description="SDXL Image Generation API")
 
+    os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+
+    if args.sd_model_version == "sdxl":
+        pipe_wrapper = SdxlControlnetUnionPipelineWrapper(base_model=args.model)
+    else:
+        pipe_wrapper = SD15PipelineWrapper(base_model=args.model)
+
     diff_service = DiffusionService(
-        pipeline_wrapper=SdxlControlnetUnionPipelineWrapper(base_model=args.model),
+        pipeline_wrapper=pipe_wrapper,
         local_debug=True
     )
 
@@ -138,6 +162,7 @@ if __name__ == "__main__":
             return result
         
         except Exception as e:
+            print(str(e.with_traceback()))
             raise HTTPException(status_code=500, detail=str(e))
         
     @app.get("/memory-info")

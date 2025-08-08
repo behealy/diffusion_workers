@@ -1,0 +1,16 @@
+# All props optional.
+name: "example"
+manifest_url: null # Optional url to fetch a manifest file like this.
+base_models: 
+  - hf_repo: stabilityai/stable-diffusion-xl-base-1.0
+controlnets:
+  - hf_repo: xinsir/controlnet-union-sdxl-1.0
+loras:
+  - hf_repo: lora/lora-1.3.0
+    weight_name: pixel-art-xl.safetensors
+prompt_templates: 
+  - name: "high_quality_image"
+    template: "a high-quality, detailed image of a {object} in the style of {style}"
+
+
+

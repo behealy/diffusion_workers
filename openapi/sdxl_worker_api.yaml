@@ -154,6 +154,7 @@ components:
       type: object
       required:
         - prompt
+        - dimensions
       properties:
         prompt:
           type: string
@@ -163,7 +164,6 @@ components:
         starting_image:
           type: string
           description: Base64 encoded starting image for image-to-image or inpainting
-          format: byte
           nullable: true
         negative_prompt:
           type: string
@@ -196,16 +196,19 @@ components:
           format: int64
           nullable: true
         dimensions:
-          type: array
-          description: Output image dimensions [height, width]
-          items:
-            type: integer
-            minimum: 64
-            maximum: 2048
-          minItems: 2
-          maxItems: 2
-          default: [512, 512]
-          example: [1024, 1024]
+          type: object
+          required:
+            - width
+            - height
+          properties:
+            width:
+              type: integer
+              default: 512
+            height: 
+              type: integer
+              default: 512
+          default: {width: 512, height: 512}
+          description: Output image dimensions {width, height}
         inpaint:
           $ref: '#/components/schemas/InpaintParams'
           nullable: true
@@ -250,15 +253,19 @@ components:
       type: object
       required:
         - guide_image
-        - union_control_mode
+        - processor_type
       properties:
+        guess_mode:
+          type: boolean
+          description: generates an image from only the control input (canny edge, depth map, pose, etc.) and without guidance from a prompt.
+          default: false
         guide_image:
           type: string
           description: Control image as URL or base64 encoded string
           example: "data:image/jpeg;base64,/9j/4AAQSkZJRgABA..."
-        preprocess_with:
-          $ref: '#/components/schemas/CNProcessorType'
-          nullable: true
+        needs_preprocess:
+          type: boolean
+          default: false
         model:
           type: string
           description: ControlNet model identifier
@@ -291,8 +298,8 @@ components:
           minimum: 0.0
           maximum: 1.0
           default: 0.7
-        union_control_mode:
-          $ref: '#/components/schemas/CNUnionControlMode'
+        processor_type: 
+          $ref: '#/components/schemas/CNProcessorType'
 
     LoraParams:
       type: object
@@ -314,13 +321,8 @@ components:
           example: "anime style"
           nullable: true
         scale:
-          oneOf:
-            - type: number
-              format: float
-            - type: object
-              additionalProperties:
-                type: number
-                format: float
+          type: number
+          format: float
           description: LoRA scaling factor (can be single value or per-layer dict)
           default: 0.8
 
@@ -381,21 +383,9 @@ components:
         - softedge_pidsafe
         - dwpose
         - openpose_hand_body
+        - segmentation
+        - inpaint
       description: ControlNet preprocessing method
-
-    CNUnionControlMode:
-      type: integer
-      enum: [0, 1, 2, 3, 4, 5, 6, 7]
-      description: |
-        ControlNet Union control mode:
-        - 0: OpenPose
-        - 1: Depth
-        - 2: HED/Scribble/Ted
-        - 3: Canny/Lineart/Anime Lineart/MLSD  
-        - 4: Normal
-        - 5: Segmentation
-        - 6: Tile
-        - 7: Inpaint
 
     OpStatus:
       type: string

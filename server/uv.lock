@@ -1030,7 +1030,6 @@ dependencies = [
     { name = "deepcache" },
     { name = "diffusers", extra = ["torch"] },
     { name = "fastapi" },
-    { name = "mooove-server-api" },
     { name = "peft" },
     { name = "pydantic" },
     { name = "runpod" },
@@ -1044,34 +1043,11 @@ requires-dist = [
     { name = "deepcache", specifier = ">=0.1.1" },
     { name = "diffusers", extras = ["torch"], specifier = ">=0.34.0" },
     { name = "fastapi", specifier = ">=0.100.0" },
-    { name = "mooove-server-api", path = "openapi/dist/mooove_server_api-1.0.0-py3-none-any.whl" },
     { name = "peft", specifier = ">=0.17.0" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "runpod", specifier = ">=1.7.13" },
     { name = "transformers", specifier = ">=4.54.1" },
     { name = "uvicorn", specifier = ">=0.20.0" },
-]
-
-[[package]]
-name = "mooove-server-api"
-version = "1.0.0"
-source = { path = "openapi/dist/mooove_server_api-1.0.0-py3-none-any.whl" }
-dependencies = [
-    { name = "pydantic" },
-    { name = "python-dateutil" },
-    { name = "typing-extensions" },
-    { name = "urllib3" },
-]
-wheels = [
-    { filename = "mooove_server_api-1.0.0-py3-none-any.whl", hash = "sha256:7402e26ca6d00a601e29e0bd2c151d7b4333536a315a0f33f6d3f13dbbe44167" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "pydantic", specifier = ">=2" },
-    { name = "python-dateutil", specifier = ">=2.8.2" },
-    { name = "typing-extensions", specifier = ">=4.7.1" },
-    { name = "urllib3", specifier = ">=2.1.0,<3.0.0" },
 ]
 
 [[package]]
