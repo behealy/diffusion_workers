@@ -11,7 +11,7 @@ import base64
 import runpod
 import uvicorn
 from fastapi import FastAPI, HTTPException, responses
-from pipelinewrapper import PipelineWrapper, SD15PipelineWrapper, SdxlControlnetUnionPipelineWrapper
+from pipelinewrapper import PipelineWrapper, DefaultPipelineWrapper, SD15Fp16ControlNetGetter, SDXLFp16ControlNetUnionGetter
 from controlnet_preprocessor import ControlnetSetupHandler, ControlnetUnionSetupHandler
 from utils import get_memory_info, load_image_from_base64_or_url, print_memory_info, resolve_device
 from mooove_server_api import ImageGenerateRequest, ImageGenerationParams
@@ -26,8 +26,8 @@ class DiffusionService:
         ):
        self.pipeline_wrapper = pipeline_wrapper
        self.local_debug = local_debug
-       self.t2i_cnunion_handler = ControlnetUnionSetupHandler()
-       self.t2i_cn_handler = ControlnetSetupHandler()
+       self.cnunion_handler = ControlnetUnionSetupHandler()
+       self.cn_handler = ControlnetSetupHandler()
 
     def generate(
         self,
@@ -42,40 +42,27 @@ class DiffusionService:
             else: 
                 seed = random.getrandbits(64)
 
-            loras = input_params.loras
-            prompt = input_params.prompt
-            warnings = []
-            response = {"prompt": prompt, "seed": seed}
+            generator = torch.Generator(device=resolve_device()).manual_seed(seed)
 
-            # Start fresh - unload any existing LoRAs from the base pipeline
-            self.pipeline_wrapper.unload_loras()
-            kwargs = {**input_params.dimensions.to_dict()}
-            if loras and len(loras) > 0:
-                res = self.pipeline_wrapper.load_loras(loras)
-                if (res.status is OpStatus.FAILURE):
-                    warnings = [*warnings, res]
-                kwargs = { **kwargs, "cross_attention_kwargs": {"scale": loras[0].scale}}
-                for lora in loras:
-                    if lora.tag is not None:
-                         prompt += f"{prompt}, {lora.tag}"
-               
+            prompt = input_params.prompt
+            kwargs = {**input_params.dimensions.to_dict(), "prompt": prompt}
+            response = {"prompt": prompt, "seed": seed, "warnings": []}
+
+            (kwargs, response) = self.pipeline_wrapper.setup(input_params, kwargs, response)
             pipe = self.pipeline_wrapper.get_pipeline_for_inputs(input_params)
           
             if controlnets and len(controlnets) > 0:
-                res = self.t2i_cn_handler.get_controlnet_args(input_params)
+                res = self.cn_handler.get_controlnet_args(input_params)
                 if res.status is not OpStatus.FAILURE and res.result is not None:
                     kwargs = {**kwargs, **res.result}
                 else: 
                     print(f"ControlNet error: {res.message}")
-                    warnings = [*warnings, res]      
+                    response = {**response, "warnings": [*response["warnings"], res]}   
 
             print_memory_info()
 
-            print(kwargs)
-            generator = torch.Generator(device=resolve_device()).manual_seed(seed)
-
-            if input_params.starting_image: 
-                img = load_image_from_base64_or_url(input_params.starting_image, input_params.dimensions.width, input_params.dimensions.height)
+            if input_params.image_to_image: 
+                img = load_image_from_base64_or_url(input_params.image_to_image.starting_image.source, input_params.dimensions.width, input_params.dimensions.height)
                 (width, height) = img.size
                 buffer = BytesIO()
                 img.save(buffer, format="JPEG")
@@ -94,8 +81,6 @@ class DiffusionService:
             )
 
             image = result.images[0]
-
-            response = {"warnings": warnings, **response}
 
             if self.local_debug:
                 print("Local debug enabled. Saving image to file.")
@@ -139,9 +124,9 @@ if __name__ == "__main__":
     os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
     if args.sd_model_version == "sdxl":
-        pipe_wrapper = SdxlControlnetUnionPipelineWrapper(base_model=args.model)
+        pipe_wrapper = DefaultPipelineWrapper(base_model=args.model, get_controlnet=SDXLFp16ControlNetUnionGetter())
     else:
-        pipe_wrapper = SD15PipelineWrapper(base_model=args.model)
+        pipe_wrapper = DefaultPipelineWrapper(base_model=args.model)
 
     diff_service = DiffusionService(
         pipeline_wrapper=pipe_wrapper,

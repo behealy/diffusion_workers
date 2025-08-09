@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import os
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Generic, TypeVar
+from jinja2 import pass_context
 from regex import R
 import torch
 from attr import dataclass
@@ -19,9 +20,76 @@ from utils import resolve_device
 from dataclasses import dataclass
 from mooove_server_api import LoraParams, ImageGenerationParams, ControlNetParams, CNProcessorType
 from functools import lru_cache
+from DeepCache import DeepCacheSDHelper
 
 
-SD15_CN_MODEL_MAPPINGS = {
+
+class PipelineWrapper(ABC):
+    @abstractmethod
+    def get_pipeline_for_inputs(self, params: ImageGenerationParams) -> Callable:
+        pass
+
+    def load_loras(self, pipeline, loras: List[LoraParams]) -> OpResult:
+        """Load LoRA weights into the pipeline."""
+        for lora in loras:
+            try:
+                adapter_name=lora.weight_name.split(".")[0]
+                pipeline.load_lora_weights(
+                    lora.model,
+                    weight_name=lora.weight_name,
+                    adapter_name=adapter_name
+                )
+                return OpResult(operation="LoRA Load", status=OpStatus.SUCCESS, message=f"LoRA {lora.model} loaded successfully", result=None)
+            except Exception as e:
+                message = f"Failed to load LoRA {lora.model}: {e}"
+                print(message)
+                return OpResult(operation="LoRA Load", status=OpStatus.FAILURE, message=message, result=None)
+        return OpResult(operation="LoRA Load", status=OpStatus.FAILURE, message="no LoRAs to load",  result=None)
+
+    def unload_loras(self, pipeline):
+        """Unload all LoRA weights from the pipeline to restore original model weights."""
+        try:
+            print(f"Unloading LORA weights")
+            pipeline.unload_lora_weights()
+        except Exception as e:
+            print(f"Warning: Failed to unload LoRA weights: {e}")
+  
+    @abstractmethod
+    def setup(self, input: ImageGenerationParams, pipekwargs, response) -> tuple[dict, dict]:
+        pass
+   
+
+@dataclass
+class PipelineVariants:
+    base_pipeline: Any
+    i2i_pipeline: Any
+    inpaint_pipeline: Any
+    t2i_cn_pipeline: Any
+    i2i_cn_pipeline: Any
+    inpaint_cn_pipeline: Any
+    controlnet_union_model: Optional[ControlNetUnionModel] = None
+    controlnet_models: Optional[list[ControlNetModel]] = None
+
+CNM = TypeVar("CNM")
+
+class ControlNetGetter(ABC, Generic[CNM]):
+    @abstractmethod
+    def __call__(self, **args) -> CNM:
+        pass
+
+class SDXLFp16ControlNetUnionGetter(ControlNetGetter[ControlNetUnionModel]):
+    def __call__(self, **args) -> ControlNetUnionModel:
+        return self.__load_cn()
+        
+    def __load_cn(self): 
+        return ControlNetUnionModel.from_pretrained(
+            "xinsir/controlnet-union-sdxl-1.0",
+            torch_dtype=torch.float16,
+            variant="fp16"
+        )
+
+class SD15Fp16ControlNetGetter(ControlNetGetter[ControlNetModel]):
+    SD15_FP16_CN_MODEL_MAPPINGS = {
             CNProcessorType.OPENPOSE: "lllyasviel/control_v11p_sd15_openpose",
             CNProcessorType.OPENPOSE_FACE: "lllyasviel/control_v11p_sd15_openpose",
             CNProcessorType.OPENPOSE_FACEONLY: "lllyasviel/control_v11p_sd15_openpose",
@@ -48,44 +116,34 @@ SD15_CN_MODEL_MAPPINGS = {
             CNProcessorType.INPAINT: "lllyasviel/control_v11p_sd15_inpaint",
             CNProcessorType.SEGMENTATION: "lllyasviel/control_v11p_sd15_segmentation",
         }
-
-class PipelineWrapper(ABC):
-    @abstractmethod
-    def get_pipeline_for_inputs(self, params: ImageGenerationParams) -> Callable:
-        pass
-  
-    @abstractmethod
-    def load_loras(self, loras: List[LoraParams]) -> OpResult:
-        pass
-
-    @abstractmethod
-    def unload_loras(self):
-        pass
-
-@dataclass
-class PipelineVariants:
-    base_pipeline: Any
-    i2i_pipeline: Any
-    inpaint_pipeline: Any
-    t2i_cn_pipeline: Any
-    i2i_cn_pipeline: Any
-    inpaint_cn_pipeline: Any
-    controlnet_union_model: Optional[ControlNetUnionModel] = None
-    controlnet_models: Optional[list[ControlNetModel]] = None
-
-def memoize(func):
-    cache = {}
-
-class SD15PipelineWrapper(PipelineWrapper):
-
+    
+    def __call__(self, **args) -> ControlNetModel:
+        cn_type = args.pop("cn_type")
+        print(f"SD15ControlNetGetter invoke: {cn_type}")
+        return self.__get_controlnet(
+            model = self.SD15_FP16_CN_MODEL_MAPPINGS[cn_type],
+        )
+    
+    @lru_cache(maxsize=4)
+    def __get_controlnet(self, model: str):
+        print(f"{self.__class__} get_controlnet")
+        return ControlNetModel.from_pretrained(
+            model, 
+            variant="fp16", 
+            torch_dtype=torch.float16
+        )
+    
+class DefaultPipelineWrapper(PipelineWrapper):
     def __init__(
         self, 
         base_model: str,
         use_fp16: bool = True,
+        get_controlnet: ControlNetGetter = SD15Fp16ControlNetGetter()
     ):
         self.device = resolve_device()
         self.use_fp16 = use_fp16
-
+        self.get_controlnet = get_controlnet
+        self.deepcache_helper = DeepCacheSDHelper(pipe=self.base_pipeline)
         self.base_pipeline = AutoPipelineForText2Image.from_pretrained(
             base_model,
             safety_checker=None,
@@ -94,15 +152,6 @@ class SD15PipelineWrapper(PipelineWrapper):
         ).to(self.device)
        
         self.base_pipeline.scheduler = DDIMScheduler.from_config(self.base_pipeline.scheduler.config)
-
-        # Optimizations
-        from DeepCache import DeepCacheSDHelper
-        helper = DeepCacheSDHelper(pipe=self.base_pipeline)
-        helper.set_params(
-            cache_interval=3,
-            cache_branch_id=1,
-        )
-        helper.enable()
 
         # check env var DO_TORCH_COMPILE 
         if os.getenv("DO_TORCH_COMPILE") and torch.cuda.is_available(): 
@@ -113,19 +162,36 @@ class SD15PipelineWrapper(PipelineWrapper):
             return {"torch_dtype": torch.float16, "variant": "fp16"}
         else:
             return {}
+        
+    def setup(self, input: ImageGenerationParams, pipekwargs, response):
+        if input.pipeline_optimizations:
+             # Optimizations
+            if input.pipeline_optimizations.deepcache_branch_id and input.pipeline_optimizations.deepcache_interval:
+                self.deepcache_helper.set_params(
+                    cache_interval=input.pipeline_optimizations.deepcache_interval,
+                    cache_branch_id=input.pipeline_optimizations.deepcache_branch_id,
+                )
+                self.deepcache_helper.enable()
 
-    @lru_cache(maxsize=4)
-    def get_controlnet(self, model: str, dtype: torch.dtype = torch.float16):
-        kwa = self.__resolve_pipeline_precision()
-        print(f"SD15PipelineWrapper get_controlnet kwargs: {kwa}")
-        return ControlNetModel.from_pretrained(
-            model, 
-            **kwa
-        )
+        loras = input.loras
+        if loras and len(loras) > 0:
+            prompt = pipekwargs.prompt
+            res = self.load_loras(self.base_pipeline, loras)
+            if (res.status is OpStatus.FAILURE):
+                response = {**response, "warnings": [*response.warnings, res]}
+            for lora in loras:
+                if lora.tag is not None:
+                    prompt += f"{prompt}, {lora.tag}"
+            pipekwargs = { **pipekwargs, "prompt": prompt, "cross_attention_kwargs": {"scale": loras[0].scale}}
+        return (pipekwargs, response)    
+    
+    def cleanup(self):
+        self.unload_loras(self.base_pipeline)
+        self.deepcache_helper.disable()
     
     @lru_cache(maxsize=6)
     def __get_pipeline(self, pipetype: PipeType, *controlnet_models: CNProcessorType):
-        cn_models = [self.get_controlnet(SD15_CN_MODEL_MAPPINGS[controlnet]) for controlnet in controlnet_models]
+        cn_models = [self.get_controlnet(cn_type = controlnet) for controlnet in controlnet_models]
 
         if len(cn_models) > 0:
             kwargs = {
@@ -154,35 +220,10 @@ class SD15PipelineWrapper(PipelineWrapper):
             return AutoPipelineForText2Image.from_pipe(
                 self.base_pipeline,
                 **kwargs
-            ).to(self.device)
-
-    def load_loras(self, loras: List[LoraParams]) -> OpResult:
-        """Load LoRA weights into the pipeline."""
-        for lora in loras:
-            try:
-                adapter_name=lora.weight_name.split(".")[0]
-                self.base_pipeline.load_lora_weights(
-                    lora.model,
-                    weight_name=lora.weight_name,
-                    adapter_name=adapter_name
-                )
-                return OpResult(operation="LoRA Load", status=OpStatus.SUCCESS, message=f"LoRA {lora.model} loaded successfully", result=None)
-            except Exception as e:
-                message = f"Failed to load LoRA {lora.model}: {e}"
-                print(message)
-                return OpResult(operation="LoRA Load", status=OpStatus.FAILURE, message=message, result=None)
-        return OpResult(operation="LoRA Load", status=OpStatus.FAILURE, message="no LoRAs to load",  result=None)
-
-    def unload_loras(self):
-        """Unload all LoRA weights from the pipeline to restore original model weights."""
-        try:
-            print(f"Unloading LORA weights")
-            self.base_pipeline.unload_lora_weights()
-        except Exception as e:
-            print(f"Warning: Failed to unload LoRA weights: {e}")
+            ).to(self.device)  
 
     def get_pipeline_for_inputs(self, params: ImageGenerationParams) -> Callable:
-        if params.starting_image:
+        if params.image_to_image:
             pipetype = PipeType.IMAGE2IMAGE
         elif params.inpaint:
             pipetype = PipeType.INPAINT
@@ -195,120 +236,4 @@ class SD15PipelineWrapper(PipelineWrapper):
             cn_model_names = []
         
         return self.__get_pipeline(pipetype, *cn_model_names)
-        
-
-class SdxlControlnetUnionPipelineWrapper(PipelineWrapper):
-    def __init__(
-        self, 
-        base_model: str,
-        pipelines: Optional[PipelineVariants] = None,
-    ):
-        device = resolve_device()
-        if pipelines is None:
-            cn_union = ControlNetUnionModel.from_pretrained(
-                "xinsir/controlnet-union-sdxl-1.0", 
-                torch_dtype=torch.float16
-            )
-            base = AutoPipelineForText2Image.from_pretrained(
-                    base_model,
-                    torch_dtype=torch.float16,
-                    variant="fp16",
-                    safety_checker=None,
-                    requires_safety_checker=False,
-            ).to(device)
-            self.pipelines = PipelineVariants(
-                controlnet_union_model = cn_union,
-                base_pipeline=base,
-                i2i_pipeline=AutoPipelineForImage2Image.from_pipe(
-                    base,
-                    torch_dtype=torch.float16,
-                    variant="fp16"
-                ).to(device),
-                inpaint_pipeline=AutoPipelineForInpainting.from_pipe(
-                    base,
-                    torch_dtype=torch.float16,
-                    variant="fp16"
-                ).to(device),
-                t2i_cn_pipeline=AutoPipelineForText2Image.from_pipe(
-                    base,
-                    torch_dtype=torch.float16,
-                    variant="fp16",
-                    controlnet = cn_union
-                ).to(device),
-                i2i_cn_pipeline = AutoPipelineForImage2Image.from_pipe(
-                    base,
-                    torch_dtype=torch.float16,
-                    variant="fp16",
-                    controlnet =cn_union
-                ).to(device),
-                inpaint_cn_pipeline=AutoPipelineForInpainting.from_pipe(
-                    base,
-                    torch_dtype=torch.float16,
-                    variant="fp16",
-                    controlnet=cn_union
-                ).to(device)
-            )
-        else: 
-            self.pipelines = pipelines
-       
-        self.pipelines.base_pipeline.scheduler = DDIMScheduler.from_config(self.pipelines.base_pipeline.scheduler.config)
-
-        # Optimizations
-        from DeepCache import DeepCacheSDHelper
-        helper = DeepCacheSDHelper(pipe=self.pipelines.base_pipeline)
-        helper.set_params(
-            cache_interval=3,
-            cache_branch_id=1,
-        )
-        helper.enable()
-
-        # check env var DO_TORCH_COMPILE 
-        if os.getenv("DO_TORCH_COMPILE") and torch.cuda.is_available(): 
-            self.pipelines.base_pipeline.unet = torch.compile(self.pipelines.base_pipeline.unet, mode="reduce-overhead", fullgraph=True)
-        
-
-    def load_loras(self, loras: List[LoraParams]) -> OpResult:
-        """Load LoRA weights into the pipeline."""
-        for lora in loras:
-            try:
-                adapter_name=lora.weight_name.split(".")[0]
-                self.pipelines.base_pipeline.load_lora_weights(
-                    lora.model,
-                    weight_name=lora.weight_name,
-                    adapter_name=adapter_name
-                )
-                return OpResult(operation="LoRA Load", status=OpStatus.SUCCESS, message=f"LoRA {lora.model} loaded successfully", result=None)
-            except Exception as e:
-                message = f"Failed to load LoRA {lora.model}: {e}"
-                print(message)
-                return OpResult(operation="LoRA Load", status=OpStatus.FAILURE, message=message, result=None)
-        return OpResult(operation="LoRA Load", status=OpStatus.FAILURE, message="no LoRAs to load",  result=None)
-
-    def unload_loras(self):
-        """Unload all LoRA weights from the pipeline to restore original model weights."""
-        try:
-            print(f"Unloading LORA weights")
-            self.pipelines.base_pipeline.unload_lora_weights()
-        except Exception as e:
-            print(f"Warning: Failed to unload LoRA weights: {e}")
-      
-
-    def get_pipeline_for_inputs(self, params: ImageGenerationParams) -> Callable:
-        need_i2i = params.starting_image is not None
-        need_controlnet = params.controlnets is not None and len(params.controlnets) > 0
-        if need_i2i:
-            if need_controlnet:
-                return self.pipelines.i2i_cn_pipeline
-            else:
-                return self.pipelines.i2i_pipeline
-        if params.inpaint is not None:
-            if params.inpaint.use_controlnet_union_inpaint or need_controlnet:
-                return self.pipelines.inpaint_cn_pipeline
-            else:
-                return self.pipelines.inpaint_pipeline
-        elif need_controlnet:
-            return self.pipelines.t2i_cn_pipeline
-        else: 
-            return self.pipelines.base_pipeline
-
         

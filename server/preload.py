@@ -20,17 +20,17 @@ def load_models_from_manifest(file_path):
     if 'base_models' in config and config['base_models']:
         for model_config in config['base_models']:
             hf_repo = model_config.get('hf_repo')
-    if hf_repo:
-        try:
-            # Load pipeline for each base model
-            pipeline = AutoPipeline.from_pretrained(hf_repo,
-                    torch_dtype=torch.float16,
-                    variant="fp16",
-                    safety_checker=None,
-                    requires_safety_checker=False,)  
-            print(f"Loaded base model from {hf_repo}")
-        except Exception as e:
-            print(f"Failed to load base model from {hf_repo}: {e}")
+            if hf_repo:
+                try:
+                # Load pipeline for each base model
+                    pipeline = AutoPipeline.from_pretrained(hf_repo,
+                        torch_dtype=torch.float16,
+                        variant="fp16",
+                        safety_checker=None,
+                        requires_safety_checker=False,)  
+                    print(f"Loaded base model from {hf_repo}")
+                except Exception as e:
+                    print(f"Failed to load base model from {hf_repo}: {e}")
     
     # 3. Process controlnets
     controlnets = {}

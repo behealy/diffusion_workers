@@ -118,7 +118,7 @@ class ControlnetSetupHandler(Preprocessor):
     op_tag="CN Preprocess"
 
     def resolve_image_kwargs(self, input: ImageGenerationParams, images: list[Image]):
-        if input.starting_image is not None:
+        if input.image_to_image is not None:
             im_kwarg = "control_image"
         else:
             im_kwarg = "image"
