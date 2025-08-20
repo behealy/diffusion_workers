@@ -40,6 +40,12 @@ export default {
           iCloudContainerEnvironment: 'Production',
         },
       ],
+      [
+        'expo-router',
+        {
+          root: './src/app',
+        },
+      ],
     ],
     experiments: {
       typedRoutes: true,

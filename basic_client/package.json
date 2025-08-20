@@ -2,7 +2,7 @@
   "name": "ez-diffusion-client",
   "version": "1.0.0",
   "type": "module",
-  "main": "index.ts",
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "start:clear": "expo start --clear",
