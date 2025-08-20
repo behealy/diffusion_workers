@@ -2,6 +2,7 @@ import { createTamagui } from '@tamagui/core';
 import { defaultConfig } from '@tamagui/config/v4';
 import { createThemes } from '@tamagui/config/v4';
 import * as Colors from '@tamagui/colors';
+import { breakpoints, spacing, radius, typography, sizes } from './src/constants/tokens';
 
 // Custom dark palette with slightly darker tones for better contrast
 const darkPalette = [
@@ -200,6 +201,64 @@ const generatedThemes = createThemes({
 const config = createTamagui({
   ...defaultConfig,
   themes: generatedThemes,
+  
+  // Override with our custom design tokens
+  tokens: {
+    ...defaultConfig.tokens,
+    space: {
+      ...defaultConfig.tokens.space,
+      ...spacing,
+    },
+    size: {
+      ...defaultConfig.tokens.size,
+      ...spacing,
+      ...Object.fromEntries(
+        Object.entries(sizes.button).map(([key, value]) => [`button-${key}`, value.height])
+      ),
+      ...Object.fromEntries(
+        Object.entries(sizes.input).map(([key, value]) => [`input-${key}`, value.height])
+      ),
+    },
+    radius: {
+      ...defaultConfig.tokens.radius,
+      ...radius,
+    },
+  },
+
+  // Add responsive media queries
+  media: {
+    ...defaultConfig.media,
+    mobile: { maxWidth: breakpoints.tablet - 1 },
+    tablet: { minWidth: breakpoints.tablet, maxWidth: breakpoints.desktop - 1 },
+    desktop: { minWidth: breakpoints.desktop, maxWidth: breakpoints.wide - 1 },
+    wide: { minWidth: breakpoints.wide },
+    short: { maxHeight: 700 },
+    tall: { minHeight: 900 },
+    hoverNone: { hover: 'none' },
+    pointerCoarse: { pointer: 'coarse' },
+  },
+
+  // Add custom fonts and typography
+  fonts: {
+    ...defaultConfig.fonts,
+    body: {
+      ...defaultConfig.fonts.body,
+      size: typography.fontSize,
+      lineHeight: Object.fromEntries(
+        Object.entries(typography.lineHeight).map(([key, value]) => [key, value])
+      ),
+      weight: typography.fontWeight,
+    },
+    heading: {
+      ...defaultConfig.fonts.heading,
+      size: typography.fontSize,
+      lineHeight: Object.fromEntries(
+        Object.entries(typography.lineHeight).map(([key, value]) => [key, value])
+      ),
+      weight: typography.fontWeight,
+    },
+  },
+
   settings: {
     ...defaultConfig.settings,
     fastSchemeChange: true, // Enable fast iOS theme switching
