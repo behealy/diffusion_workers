@@ -2,6 +2,18 @@
 
 A RunPod serverless worker for Stable Diffusion XL image generation with support for LoRAs and ControlNet.
 
+
+ ### Server TODOs                                                                                                                                                                                                                 │ │
+ [] Find a way to preserve types from the generated openapi client during dev                                                                                                                                                  │ │
+ [] Load models at build time based on a config file containing lists of models. These will be YAML files.                                                                                                                     │ │
+[] Multiple base model swapping with maximal pipeline resource reuse when switching.                                                                                                                                          │ │
+ [] Full Runpod load-balancing serverless worker api                                                                                                                                                                           │ │
+ [] Upscaler                                                                                                                                                                                                                   │ │
+[] Test and fix inpainting                                                                                                                                                                                                    │ │
+[] Implement multiple controlnets. Test and fix controlnet.                                                                                                                                                                   │ │
+[] Prompt weighting                                                                                                                                                                                                           │ │
+ [] Have the usage and params of DeepCache in pipeline_factory.py be influenced by request arguments  
+
 ## Features
 
 - **Text-to-Image Generation**: Generate high-quality images from text prompts using SDXL
