@@ -1,7 +1,7 @@
-import { createTamagui } from '@tamagui/core'
-import { defaultConfig } from '@tamagui/config/v4'
-import { createThemes } from '@tamagui/config/v4'
-import * as Colors from '@tamagui/colors'
+import { createTamagui } from '@tamagui/core';
+import { defaultConfig } from '@tamagui/config/v4';
+import { createThemes } from '@tamagui/config/v4';
+import * as Colors from '@tamagui/colors';
 
 // Custom dark palette with slightly darker tones for better contrast
 const darkPalette = [
@@ -17,7 +17,7 @@ const darkPalette = [
   '#626262', // 9
   '#a5a5a5', // 10 - Light gray for secondary text
   '#ffffff', // 11 - Pure white
-]
+];
 
 const lightPalette = [
   '#ffffff', // 0 - Pure white
@@ -32,17 +32,17 @@ const lightPalette = [
   '#444444', // 9
   '#2a2a2a', // 10 - Dark gray for text
   '#000000', // 11 - Pure black
-]
+];
 
 // Enhanced shadows for better depth
 const lightShadows = {
   shadow1: 'rgba(0,0,0,0.02)',
-  shadow2: 'rgba(0,0,0,0.06)', 
+  shadow2: 'rgba(0,0,0,0.06)',
   shadow3: 'rgba(0,0,0,0.12)',
   shadow4: 'rgba(0,0,0,0.16)',
   shadow5: 'rgba(0,0,0,0.24)',
   shadow6: 'rgba(0,0,0,0.32)',
-}
+};
 
 const darkShadows = {
   shadow1: 'rgba(0,0,0,0.4)',
@@ -51,7 +51,7 @@ const darkShadows = {
   shadow4: 'rgba(0,0,0,0.7)',
   shadow5: 'rgba(0,0,0,0.8)',
   shadow6: 'rgba(0,0,0,0.9)',
-}
+};
 
 // Accent colors for the diffusion client
 const extraColors = {
@@ -60,22 +60,22 @@ const extraColors = {
   primary2: '#4f46e5',
   primary3: '#4338ca',
   primary4: '#3730a3',
-  
+
   // Success colors
   success1: '#10b981', // Emerald
   success2: '#059669',
   success3: '#047857',
-  
-  // Warning colors  
+
+  // Warning colors
   warning1: '#f59e0b', // Amber
   warning2: '#d97706',
   warning3: '#b45309',
-  
+
   // Error colors
   error1: '#ef4444', // Red
-  error2: '#dc2626', 
+  error2: '#dc2626',
   error3: '#b91c1c',
-  
+
   // Neutral grays
   black1: darkPalette[0],
   black2: darkPalette[1],
@@ -89,7 +89,7 @@ const extraColors = {
   black10: darkPalette[9],
   black11: darkPalette[10],
   black12: darkPalette[11],
-  
+
   white1: lightPalette[0],
   white2: lightPalette[1],
   white3: lightPalette[2],
@@ -102,7 +102,7 @@ const extraColors = {
   white10: lightPalette[9],
   white11: lightPalette[10],
   white12: lightPalette[11],
-}
+};
 
 // Generate themes using the v4 config
 const generatedThemes = createThemes({
@@ -145,8 +145,34 @@ const generatedThemes = createThemes({
   childrenThemes: {
     primary: {
       palette: {
-        dark: ['#1e1b4b', '#312e81', '#3730a3', '#4338ca', '#4f46e5', '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#ddd6fe', '#e0e7ff', '#f0f4ff'],
-        light: ['#f0f4ff', '#e0e7ff', '#ddd6fe', '#c7d2fe', '#a5b4fc', '#818cf8', '#6366f1', '#4f46e5', '#4338ca', '#3730a3', '#312e81', '#1e1b4b'],
+        dark: [
+          '#1e1b4b',
+          '#312e81',
+          '#3730a3',
+          '#4338ca',
+          '#4f46e5',
+          '#6366f1',
+          '#818cf8',
+          '#a5b4fc',
+          '#c7d2fe',
+          '#ddd6fe',
+          '#e0e7ff',
+          '#f0f4ff',
+        ],
+        light: [
+          '#f0f4ff',
+          '#e0e7ff',
+          '#ddd6fe',
+          '#c7d2fe',
+          '#a5b4fc',
+          '#818cf8',
+          '#6366f1',
+          '#4f46e5',
+          '#4338ca',
+          '#3730a3',
+          '#312e81',
+          '#1e1b4b',
+        ],
       },
     },
     success: {
@@ -168,7 +194,7 @@ const generatedThemes = createThemes({
       },
     },
   },
-})
+});
 
 // Create the final config
 const config = createTamagui({
@@ -182,11 +208,11 @@ const config = createTamagui({
     allowedStyleValues: 'somewhat-strict-web', // Web-specific style values
     maxDarkLightNesting: 2, // Allow some theme nesting
   },
-})
+});
 
-export default config
+export default config;
 
-export type Conf = typeof config
+export type Conf = typeof config;
 
 declare module '@tamagui/core' {
   interface TamaguiCustomConfig extends Conf {}

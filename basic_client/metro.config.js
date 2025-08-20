@@ -1,8 +1,9 @@
 // Learn more https://docs.expo.io/guides/customizing-metro
-const { getDefaultConfig } = require('expo/metro-config');
+import { getDefaultConfig } from 'expo/metro-config';
+import path from 'path';
 
 /** @type {import('expo/metro-config').MetroConfig} */
-const config = getDefaultConfig(__dirname);
+const config = getDefaultConfig(path.dirname(new URL(import.meta.url).pathname));
 
 // Add support for React Native Skia
 config.resolver.assetExts.push('ttf', 'otf', 'woff', 'woff2', 'bin');
@@ -13,4 +14,4 @@ config.transformer.hermesFlags = [];
 // Skia configuration
 config.resolver.platforms = [...config.resolver.platforms, 'native', 'skia'];
 
-module.exports = config;
+export default config;

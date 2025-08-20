@@ -1,6 +1,7 @@
 {
   "name": "ez-diffusion-client",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
@@ -11,7 +12,12 @@
     "build:android": "expo build android",
     "build:ios": "expo build ios",
     "build:web": "expo build web",
-    "lint": "expo lint",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings 1",
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "code-quality": "npm run type-check && npm run lint && npm run format:check",
+    "code-quality:fix": "npm run type-check && npm run lint:fix && npm run format",
     "test": "jest",
     "type-check": "tsc --noEmit"
   },
@@ -36,7 +42,17 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "@react-native-community/eslint-config": "^3.2.0",
     "@types/react": "~19.0.10",
+    "@typescript-eslint/eslint-plugin": "^8.40.0",
+    "@typescript-eslint/parser": "^8.40.0",
+    "eslint": "^9.33.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-native": "^5.0.0",
+    "prettier": "^3.6.2",
     "typescript": "~5.8.3"
   },
   "private": true
