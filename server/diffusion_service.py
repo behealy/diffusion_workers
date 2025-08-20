@@ -11,23 +11,23 @@ import base64
 import runpod
 import uvicorn
 from fastapi import FastAPI, HTTPException, responses
-from pipelinewrapper import PipelineWrapper, DefaultPipelineWrapper, SD15Fp16ControlNetGetter, SDXLFp16ControlNetUnionGetter
-from controlnet_preprocessor import ControlnetSetupHandler, ControlnetUnionSetupHandler
+from pipeline_factory import FluxFp16ControlNetUnionGetter, PipelineFactory, SDImagePipelineFactory, SD15Fp16ControlNetGetter, SDXLFp16ControlNetUnionGetter
+from controlnet_preprocessor import MultiModelControlnetParamsFactory, ControlnetUnionParamsFactory, ControlnetParamsFactory
 from utils import get_memory_info, load_image_from_base64_or_url, print_memory_info, resolve_device
-from mooove_server_api import ImageGenerateRequest, ImageGenerationParams
+from ez_diffusion_client import ImageGenerateRequest, ImageGenerationParams
 from models import OpStatus
 # from preload import load_models_from_manifest
 
 class DiffusionService:
     def __init__(
             self, 
-            pipeline_wrapper: PipelineWrapper,
+            pipeline_factory: PipelineFactory,
+            controlnet_params_factory: ControlnetParamsFactory,
             local_debug: bool = False
         ):
-       self.pipeline_wrapper = pipeline_wrapper
+       self.pipeline_factory = pipeline_factory
        self.local_debug = local_debug
-       self.cnunion_handler = ControlnetUnionSetupHandler()
-       self.cn_handler = ControlnetSetupHandler()
+       self.controlnet_params_factory = controlnet_params_factory
 
     def generate(
         self,
@@ -48,16 +48,10 @@ class DiffusionService:
             kwargs = {**input_params.dimensions.to_dict(), "prompt": prompt}
             response = {"prompt": prompt, "seed": seed, "warnings": []}
 
-            (kwargs, response) = self.pipeline_wrapper.setup(input_params, kwargs, response)
-            pipe = self.pipeline_wrapper.get_pipeline_for_inputs(input_params)
-          
-            if controlnets and len(controlnets) > 0:
-                res = self.cn_handler.get_controlnet_args(input_params)
-                if res.status is not OpStatus.FAILURE and res.result is not None:
-                    kwargs = {**kwargs, **res.result}
-                else: 
-                    print(f"ControlNet error: {res.message}")
-                    response = {**response, "warnings": [*response["warnings"], res]}   
+            (kwargs, response) = self.pipeline_factory.setup(input_params, kwargs, response)
+            (kwargs, response) = self.controlnet_params_factory.get_pipeline_controlnet_params(input_params, kwargs, response) 
+
+            pipe = self.pipeline_factory.get_pipeline_for_inputs(input_params)
 
             print_memory_info()
 
@@ -111,7 +105,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run SDXL inference pipeline")
     parser.add_argument("--host", default="0.0.0.0", help="Host for local server")
     parser.add_argument("--port", default=8000, type=int, help="Port for local server")
-    parser.add_argument("--sd_model_version", default="sd15")
+    parser.add_argument("--diffusion_base_model", default="sd15")
     parser.add_argument("--default_controlnet_model", default="lllyasviel/sd-controlnet-openpose")
     parser.add_argument("--model", default="stable-diffusion-v1-5/stable-diffusion-v1-5", 
                        help="Base model path or identifier")
@@ -123,17 +117,66 @@ if __name__ == "__main__":
 
     os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 
-    if args.sd_model_version == "sdxl":
-        pipe_wrapper = DefaultPipelineWrapper(base_model=args.model, get_controlnet=SDXLFp16ControlNetUnionGetter())
+    if args.diffusion_base_model == "sdxl":
+        pipe_wrapper = SDImagePipelineFactory(base_model=args.model, get_controlnet=SDXLFp16ControlNetUnionGetter())
+        controlnet_params_factory = ControlnetUnionParamsFactory()
+    # if args.diffusion_base_model == "flux":
+    #     pipe_wrapper = SDImagePipelineFactory(base_model=args.model, get_controlnet=FluxFp16ControlNetUnionGetter())
+
+    # if args.diffusion_base_model == "wan":
+    #     pipe_wrapper = 
     else:
-        pipe_wrapper = DefaultPipelineWrapper(base_model=args.model)
+        # SD 1.5 default
+        pipe_wrapper = SDImagePipelineFactory(base_model=args.model)
+        controlnet_params_factory = MultiModelControlnetParamsFactory()
 
     diff_service = DiffusionService(
-        pipeline_wrapper=pipe_wrapper,
+        pipeline_factory=pipe_wrapper,
+        controlnet_params_factory=controlnet_params_factory,
         local_debug=True
     )
 
-    @app.post("/generate-sync")
+    @app.post("/image-to-image")
+    async def image_to_image(request: ImageGenerateRequest):
+        """Generate an image from text prompt."""
+        try:
+            if not request.input.image_to_image:
+                raise HTTPException(status_code=422, detail="Input field `image_to_image` is required.")
+
+            result = diff_service.generate(
+                input_params=request.input,
+            )
+        
+            if "error" in result:
+                raise HTTPException(status_code=500, detail=result["error"])
+            
+            return result
+        
+        except Exception as e:
+            print(str(e.with_traceback()))
+            raise HTTPException(status_code=500, detail=str(e))
+        
+    @app.post("/inpaint")
+    async def inpaint(request: ImageGenerateRequest):
+        """Generate an image from text prompt."""
+        try:
+            if not request.input.inpaint:
+                raise HTTPException(status_code=422, detail="Input field `inpaint` is required.")
+
+            result = diff_service.generate(
+                input_params=request.input,
+            )
+        
+            if "error" in result:
+                raise HTTPException(status_code=500, detail=result["error"])
+            
+            return result
+        
+        except Exception as e:
+            print(str(e.with_traceback()))
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/text-to-image")
     async def generate_image(request: ImageGenerateRequest):
         """Generate an image from text prompt."""
         try:

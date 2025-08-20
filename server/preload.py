@@ -1,4 +1,4 @@
-from pipelinewrapper import SdxlControlnetUnionPipelineWrapper
+from server.pipeline_factory import SDImagePipelineFactory
 import argparse
 import torch
 from diffusers import AutoPipeline, ControlNetModel

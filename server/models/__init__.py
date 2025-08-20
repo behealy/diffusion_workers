@@ -20,6 +20,8 @@ class CNUnionControlMode(Enum):
     INPAINT = 7
 
 class PipeType(Enum):
-    TEXT2IMGE = 1
+    TEXT2IMAGE = 1
     IMAGE2IMAGE = 2
     INPAINT = 3
+    TEXT2VID = 4
+    IMG2VID = 5

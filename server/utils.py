@@ -1,5 +1,5 @@
 from functools import lru_cache
-from mooove_server_api import ImageGenerationParams, ImageInput
+from ez_diffusion_client import ImageGenerationParams, ImageInput
 import torch
 import base64
 from diffusers.utils import load_image as hf_load_image

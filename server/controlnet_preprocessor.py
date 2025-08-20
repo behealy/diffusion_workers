@@ -1,12 +1,20 @@
+from abc import ABC, abstractmethod
 from functools import lru_cache
+from typing import Tuple
 from PIL.Image import Image
 
 from controlnet_aux.processor import Processor
-from mooove_server_api import ImageGenerationParams,  CNProcessorType
+from ez_diffusion_client import ImageGenerationParams,  CNProcessorType
+from paramiko import PasswordRequiredException
 from models import OpResult, OpStatus, CNUnionControlMode
 from utils import load_image_from_base64_or_url
 
-class Preprocessor: 
+class ImageProcessor(ABC):
+    @abstractmethod
+    def process_image(self, image: str, kwargs) -> Image:
+        pass
+
+class ControlnetGuideImagePreprocessor(ImageProcessor): 
     processor_list = [
         "canny", "depth_leres", "depth_leres++", "depth_midas",
         "depth_zoe", "lineart_anime", "lineart_coarse", "lineart_realistic",
@@ -21,20 +29,14 @@ class Preprocessor:
     ]
 
     processor_cache = {} 
-
-    def resolve_image_kwargs(self, input: ImageGenerationParams, images: list[Image]) -> dict[str, list[Image]]: 
-        return {}
     
-    @lru_cache(maxsize=100)
-    def __load_image(self, do_preprocess: bool, processor_to_use: CNProcessorType, guide_image: str, desired_width: int):
-        img = load_image_from_base64_or_url(guide_image)
-        if not do_preprocess:
-            return img
-
+    def process_image(self, image: str, kwargs) -> Image: 
+        img = load_image_from_base64_or_url(image)
         (w, h) = img.size
         # scale image to nearest multiple of 64 in both width and height
         img = img.resize((w // 64 * 64, h // 64 * 64))
-        preprocessor_type = processor_to_use.value
+        preprocessor_type = kwargs.processor_to_use.value
+        desired_width = kwargs.desired_width
         if preprocessor_type not in self.processor_cache:
             print(f"'{preprocessor_type}' processor not initialized. Initializing and saving.")
             if preprocessor_type == "openpose_hand_body":
@@ -55,16 +57,53 @@ class Preprocessor:
         else:
             raise ValueError(f"Processor {preprocessor_type} not found")
         
-    
-    def preprocess(self, input: ImageGenerationParams):
+
+        
+class ControlnetParamsFactory(ABC):
+    def __init__(
+            self, 
+            image_preprocessor: ImageProcessor = ControlnetGuideImagePreprocessor()
+        ) -> None:
+        super().__init__()
+        self.image_preprocessor = image_preprocessor
+       
+    def __load_image(self, do_preprocess: bool, guide_image: str, kwargs):
+        if do_preprocess:
+            img = self.image_preprocessor.process_image(guide_image, kwargs)
+        else:
+            img = load_image_from_base64_or_url(guide_image)
+        return img
+
+    def preprocess_images(self, input: ImageGenerationParams):
         if not input.controlnets:
             raise ValueError(f"No controlnets in {input}")
-        images = [self.__load_image(cn.needs_preprocess or False, cn.processor_type, cn.guide_image, input.dimensions.width) for cn in input.controlnets]
-        return self.resolve_image_kwargs(input, images)
+    
+        images = [self.__load_image(
+            cn.needs_preprocess or False, 
+            cn.guide_image, 
+            { "processor_to_use": cn.processor_type, "desired_width": input.dimensions.width }
+        ) for cn in input.controlnets]
 
-class ControlnetUnionSetupHandler(Preprocessor):
-    op_tag="CN Preprocess"
+        return images
 
+    def get_pipeline_controlnet_params(self, input: ImageGenerationParams, pipekwargs, response) -> Tuple[dict, dict]:
+        if not input.controlnets or len(input.controlnets) <= 0:
+            return (pipekwargs, response)
+
+        try:    
+            kwargs = {**pipekwargs, **self._resolve_kwargs(input, self.preprocess_images(input))}
+            return (kwargs, response)
+        except Exception as e:
+            print(f" {self.__class__}: Failed to resolve controlnet kwargs")
+            res = {**response, "warnings": [*response.warnings, "There was an error loading some controlnets"]}
+            return (pipekwargs, res)
+
+    @abstractmethod
+    def _resolve_kwargs(self, input: ImageGenerationParams, images: list[Image]) -> dict:
+        pass
+
+
+class ControlnetUnionParamsFactory(ControlnetParamsFactory):
     def map_processor_to_control_mode(self, processor_type: CNProcessorType) -> CNUnionControlMode:
         if processor_type in {CNProcessorType.OPENPOSE, CNProcessorType.OPENPOSE_FACE,
                           CNProcessorType.OPENPOSE_FACEONLY, CNProcessorType.OPENPOSE_FULL,
@@ -91,54 +130,35 @@ class ControlnetUnionSetupHandler(Preprocessor):
         else:
             raise ValueError(f"Unknown processor type: {processor_type}")    
         
-    def resolve_image_kwargs(self, input: ImageGenerationParams, images: list[Image]):
-        if not input.controlnets:
-            raise ValueError("resolve_image_kwargs: No controlnet configs present")
-        return {"control_image": images, "control_mode": [self.map_processor_to_control_mode(controlnet.processor_type).value for controlnet in input.controlnets]}
+    def _resolve_kwargs(self, input: ImageGenerationParams, images: list[Image]) -> dict:
+        if not input.controlnets or len(input.controlnets) <= 0:
+            return {}
         
-    def get_controlnet_args(self, input: ImageGenerationParams, **kwargs) -> OpResult:
-        """Process an image using the selected ControlNet processor."""
-        if not input.controlnets:
-            return OpResult(operation=self.op_tag, status=OpStatus.SUCCESS, message="No controlnets provided.")
-
-        result = {
+        return {
             "controlnet_conditioning_scale": [controlnet.controlnet_conditioning_scale for controlnet in input.controlnets],
             "control_guidance_start": [controlnet.control_guidance_start for controlnet in input.controlnets],
             "control_guidance_end": [controlnet.control_guidance_end for controlnet in input.controlnets],
-            "guess_mode": [controlnet.guess_mode for controlnet in input.controlnets]
+            "guess_mode": [controlnet.guess_mode for controlnet in input.controlnets],
+            "control_mode": [self.map_processor_to_control_mode(controlnet.processor_type).value for controlnet in input.controlnets],
+            "control_image": images
         }
-    
-        try:    
-            return OpResult(operation=self.op_tag, status=OpStatus.SUCCESS, result={**self.preprocess(input), **result})
-        except Exception as e:
-            return OpResult(operation=self.op_tag, status=OpStatus.FAILURE, message=str(e))
 
 
-class ControlnetSetupHandler(Preprocessor):
-    op_tag="CN Preprocess"
-
-    def resolve_image_kwargs(self, input: ImageGenerationParams, images: list[Image]):
+class MultiModelControlnetParamsFactory(ControlnetParamsFactory):
+    def _resolve_kwargs(self, input: ImageGenerationParams, images: list[Image]) -> dict:
+        if not input.controlnets or len(input.controlnets) <= 0:
+            return {}
+        
         if input.image_to_image is not None:
             im_kwarg = "control_image"
         else:
             im_kwarg = "image"
-        return {im_kwarg: images}
 
-    def get_controlnet_args(self, input: ImageGenerationParams, **kwargs) -> OpResult:
-        print("ControlnetSetupHandler: get_controlnet_args")
-        """Process an image using the selected ControlNet processor."""
-        if not input.controlnets or len(input.controlnets) <= 0:
-            return OpResult(operation=self.op_tag, status=OpStatus.SUCCESS, message="No controlnets provided.")
-
-        result = {
+        return {
             "controlnet_conditioning_scale": [controlnet.controlnet_conditioning_scale for controlnet in input.controlnets],
             "control_guidance_start": [controlnet.control_guidance_start for controlnet in input.controlnets],
             "control_guidance_end": [controlnet.control_guidance_end for controlnet in input.controlnets],
-            "guess_mode": [controlnet.guess_mode for controlnet in input.controlnets]
+            "guess_mode": [controlnet.guess_mode for controlnet in input.controlnets],
+            im_kwarg: images,
         }
-       
-        try:    
-            return OpResult(operation=self.op_tag, status=OpStatus.SUCCESS, result={**self.preprocess(input), **result})
-        except Exception as e:
-            return OpResult(operation=self.op_tag, status=OpStatus.FAILURE, message=str(e))
      

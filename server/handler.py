@@ -1,9 +1,10 @@
 from pydantic import ValidationError
 import runpod
 
-from mooove_server_api import ImageGenerateRequest, ImageGenerationParams
-from .diffusion_service import DiffusionService
-from .pipelinewrapper import SdxlControlnetUnionPipelineWrapper
+from ez_diffusion_client import ImageGenerateRequest, ImageGenerationParams
+from diffusion_service import DiffusionService
+from pipeline_factory import SDImagePipelineFactory
+from controlnet_preprocessor import MultiModelControlnetParamsFactory
 
 
 def runpod_handler(job):
@@ -19,7 +20,9 @@ def runpod_handler(job):
 
         params = request.input
         gen = DiffusionService(
-            pipeline_wrapper=SdxlControlnetUnionPipelineWrapper(base_model=base_model)  # TODO use base model loaded from a config
+            pipeline_factory=SDImagePipelineFactory(base_model=base_model),  # TODO use base model loaded from a config
+            controlnet_params_factory=MultiModelControlnetParamsFactory()
+        
         )
 
         # Generate image
