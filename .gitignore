@@ -128,6 +128,7 @@ ipython_config.py
 server/test_inputs/
 
 openapi/client_libs/
+web_gen_client/
 
 # pixi
 #   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.
