@@ -9,7 +9,7 @@ function build_openapi() {
     echo "generating for $SCHEMA_PATH"
     rm -rf $OPENAPI_CLIENT_LIBS_DIR
     openapi-generator-cli validate -i "$SCHEMA_PATH"
-    # openapi-generator-cli generate -i "$SCHEMA_PATH" -g typescript-fetch -o $OPENAPI_CLIENT_LIBS_DIR/typescript
+    openapi-generator-cli generate -i "$SCHEMA_PATH" -g typescript-fetch -o $OPENAPI_CLIENT_LIBS_DIR/typescript
     openapi-generator-cli generate -i "$SCHEMA_PATH" -g python -o $OPENAPI_CLIENT_LIBS_DIR/python --package-name ez_diffusion_client
 }
 
@@ -18,6 +18,11 @@ function install_openapi_lib_debug() {
     cd server
     uv pip install -e ../$OPENAPI_CLIENT_LIBS_DIR/python --config-settings editable_mode=compat
     cd -
+
+    rm -rf basic_client/src/lib/ezdiffusion
+    mkdir -p basic_client/src/lib/ezdiffusion
+    cp -r $OPENAPI_CLIENT_LIBS_DIR/typescript/** basic_client/src/lib/ezdiffusion
+
 }
 
 function install_openapi_lib() {
