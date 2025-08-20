@@ -83,3 +83,7 @@ tablets and phones.
 - This FRONTEND should make use of the generated client for the openapi schema mentioned earlier in this document to invoke the API calls that are discussed in this document.
 - This FRONTEND should be implemented using the best development practices that are applicable to the frameworks and libraries that are chosen for building this FRONTEND.
 - This FRONTEND should be implemented using software engineering best practices, including Clean Architecture, Clean Code, and DRY (Do not repeat yourself).
+
+
+While considering the functional and non-functional requirements in basic_client/REQUIREMENTS.md and Using the technical plan in basic_client/TECHNICAL_PLAN.md, carry out #### Task 1: Initialize Expo Project and 2 in the technical planto create the new client project in /basic_client. Make sure to create a new branch, and commit with descriptive commit messages as you work your way through the tasks. 
+Use sequential thinking, and use context7 if you need to understand more deeply how do do something by looking at any relevant documentation. Update the technical plan document checkboxes at the end. 
