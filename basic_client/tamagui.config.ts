@@ -42,7 +42,7 @@ const size = {
   0: 0,
   1: 5,
   2: 10,
-  // ....
+  true: 10
 }
 
 export const tokens = createTokens({
