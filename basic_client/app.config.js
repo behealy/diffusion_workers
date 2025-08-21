@@ -43,7 +43,7 @@ export default {
       [
         'expo-router',
         {
-          root: './src/app',
+          root: './app',
         },
       ],
     ],

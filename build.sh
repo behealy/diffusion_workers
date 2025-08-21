@@ -19,9 +19,9 @@ function install_openapi_lib_debug() {
     uv pip install -e ../$OPENAPI_CLIENT_LIBS_DIR/python --config-settings editable_mode=compat
     cd -
 
-    rm -rf basic_client/src/lib/ezdiffusion
-    mkdir -p basic_client/src/lib/ezdiffusion
-    cp -r $OPENAPI_CLIENT_LIBS_DIR/typescript/** basic_client/src/lib/ezdiffusion
+    rm -rf basic_client/lib/ezdiffusion
+    mkdir -p basic_client/lib/ezdiffusion
+    cp -r $OPENAPI_CLIENT_LIBS_DIR/typescript/** basic_client/lib/ezdiffusion
 
 }
 

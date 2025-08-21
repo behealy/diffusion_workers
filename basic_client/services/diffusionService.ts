@@ -1,10 +1,10 @@
-import { Configuration, ImageGenerationApi, SystemApi } from '../lib/ezdiffusion';
+import { Configuration, ImageGenerationApi, SystemApi } from '@/lib/ezdiffusion';
 import type {
   ImageGenerateRequest,
   ImageGenerationResponse,
   MemoryInfoResponse,
-} from '../lib/ezdiffusion';
-import { API_ENDPOINTS } from '../constants';
+} from '@/lib/ezdiffusion';
+import { API_ENDPOINTS } from '@/constants/api';
 
 class DiffusionService {
   private imageGenApi: ImageGenerationApi;
