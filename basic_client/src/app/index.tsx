@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
@@ -7,9 +7,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>EZ Diffusion Client</Text>
-        <Text style={styles.subtitle}>
-          Welcome to the AI image generation client
-        </Text>
+        <Text style={styles.subtitle}>Welcome to the AI image generation client</Text>
       </View>
     </SafeAreaView>
   );
@@ -17,26 +15,26 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#1a1a1a',
+    flex: 1,
   },
   content: {
+    alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
     padding: 20,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 10,
+  subtitle: {
+    color: '#cccccc',
+    fontSize: 16,
+    lineHeight: 24,
     textAlign: 'center',
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#cccccc',
+  title: {
+    color: '#ffffff',
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 10,
     textAlign: 'center',
-    lineHeight: 24,
   },
 });

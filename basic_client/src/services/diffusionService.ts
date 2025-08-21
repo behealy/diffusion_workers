@@ -15,7 +15,7 @@ class DiffusionService {
     this.configuration = new Configuration({
       basePath: baseUrl || this.getApiEndpoint(),
     });
-    
+
     this.imageGenApi = new ImageGenerationApi(this.configuration);
     this.systemApi = new SystemApi(this.configuration);
   }

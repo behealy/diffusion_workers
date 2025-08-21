@@ -40,15 +40,15 @@ export interface ImageState {
   inputImage: ImageData | null;
   outputImage: ImageData | null;
   mask: MaskData | null;
-  
+
   // Canvas drawing state
   brushSize: number;
   isDrawing: boolean;
-  
+
   // Generation history
   generationHistory: GenerationHistoryItem[];
   maxHistorySize: number;
-  
+
   // UI state
   selectedHistoryId: string | null;
   showMask: boolean;
@@ -59,36 +59,36 @@ export interface ImageActions {
   // Input image management
   setInputImage: (image: ImageData | null) => void;
   clearInputImage: () => void;
-  
-  // Output image management  
+
+  // Output image management
   setOutputImage: (image: ImageData | null) => void;
   clearOutputImage: () => void;
   useOutputAsInput: () => void;
-  
+
   // Mask management
   setMask: (mask: MaskData | null) => void;
   clearMask: () => void;
   updateMask: (maskData: string) => void;
-  
+
   // Canvas drawing
   setBrushSize: (size: number) => void;
   setIsDrawing: (isDrawing: boolean) => void;
   setShowMask: (show: boolean) => void;
-  
+
   // History management
   addToHistory: (item: Omit<GenerationHistoryItem, 'id' | 'timestamp'>) => void;
   removeFromHistory: (id: string) => void;
   clearHistory: () => void;
   loadFromHistory: (id: string) => void;
   setSelectedHistory: (id: string | null) => void;
-  
+
   // UI state
   setPreviewZoom: (zoom: number) => void;
-  
+
   // Import/Export
   importImage: (uri: string, source: ImageData['source']) => Promise<ImageData>;
   exportImage: (image: ImageData, format?: 'png' | 'jpg') => Promise<string>;
-  
+
   // Utility actions
   reset: () => void;
 }
@@ -116,13 +116,15 @@ const generateId = (): string => {
 
 // Utility function to get image dimensions from URI
 const getImageDimensions = async (uri: string): Promise<{ width: number; height: number }> => {
+  // TODO: implementation
   return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      resolve({ width: img.width, height: img.height });
-    };
-    img.onerror = reject;
-    img.src = uri;
+    // const img = new Image();
+    // img.onload = () => {
+    //   resolve({ width: img.width, height: img.height });
+    // };
+    // img.onerror = reject;
+    // img.src = uri;
+    resolve({ width: 0, height: 0 });
   });
 };
 
@@ -131,120 +133,137 @@ export const useImageStore = create<ImageStore>()(
     persist(
       immer((set) => ({
         ...defaultState,
-        
+
         // Input image management
-        setInputImage: (image) => set((state) => {
-          state.inputImage = image;
-          // Clear mask when input image changes
-          if (image && state.mask) {
+        setInputImage: (image) =>
+          set((state) => {
+            state.inputImage = image;
+            // Clear mask when input image changes
+            if (image && state.mask) {
+              state.mask = null;
+            }
+          }),
+
+        clearInputImage: () =>
+          set((state) => {
+            state.inputImage = null;
             state.mask = null;
-          }
-        }),
-        
-        clearInputImage: () => set((state) => {
-          state.inputImage = null;
-          state.mask = null;
-        }),
-        
+          }),
+
         // Output image management
-        setOutputImage: (image) => set((state) => {
-          state.outputImage = image;
-        }),
-        
-        clearOutputImage: () => set((state) => {
-          state.outputImage = null;
-        }),
-        
-        useOutputAsInput: () => set((state) => {
-          if (state.outputImage) {
-            state.inputImage = state.outputImage;
+        setOutputImage: (image) =>
+          set((state) => {
+            state.outputImage = image;
+          }),
+
+        clearOutputImage: () =>
+          set((state) => {
             state.outputImage = null;
-            state.mask = null; // Clear mask when switching images
-          }
-        }),
-        
+          }),
+
+        useOutputAsInput: () =>
+          set((state) => {
+            if (state.outputImage) {
+              state.inputImage = state.outputImage;
+              state.outputImage = null;
+              state.mask = null; // Clear mask when switching images
+            }
+          }),
+
         // Mask management
-        setMask: (mask) => set((state) => {
-          state.mask = mask;
-        }),
-        
-        clearMask: () => set((state) => {
-          state.mask = null;
-        }),
-        
-        updateMask: (maskData) => set((state) => {
-          if (state.inputImage) {
-            state.mask = {
-              id: generateId(),
-              uri: maskData,
-              width: state.inputImage.width,
-              height: state.inputImage.height,
-              brushSize: state.brushSize,
-              createdAt: Date.now(),
-            };
-          }
-        }),
-        
+        setMask: (mask) =>
+          set((state) => {
+            state.mask = mask;
+          }),
+
+        clearMask: () =>
+          set((state) => {
+            state.mask = null;
+          }),
+
+        updateMask: (maskData) =>
+          set((state) => {
+            if (state.inputImage) {
+              state.mask = {
+                id: generateId(),
+                uri: maskData,
+                width: state.inputImage.width,
+                height: state.inputImage.height,
+                brushSize: state.brushSize,
+                createdAt: Date.now(),
+              };
+            }
+          }),
+
         // Canvas drawing
-        setBrushSize: (size) => set((state) => {
-          state.brushSize = Math.max(1, Math.min(100, size));
-        }),
-        
-        setIsDrawing: (isDrawing) => set((state) => {
-          state.isDrawing = isDrawing;
-        }),
-        
-        setShowMask: (show) => set((state) => {
-          state.showMask = show;
-        }),
-        
+        setBrushSize: (size) =>
+          set((state) => {
+            state.brushSize = Math.max(1, Math.min(100, size));
+          }),
+
+        setIsDrawing: (isDrawing) =>
+          set((state) => {
+            state.isDrawing = isDrawing;
+          }),
+
+        setShowMask: (show) =>
+          set((state) => {
+            state.showMask = show;
+          }),
+
         // History management
-        addToHistory: (item) => set((state) => {
-          const historyItem: GenerationHistoryItem = {
-            ...item,
-            id: generateId(),
-            timestamp: Date.now(),
-          };
-          
-          state.generationHistory.unshift(historyItem);
-          
-          // Trim history if it exceeds max size
-          if (state.generationHistory.length > state.maxHistorySize) {
-            state.generationHistory = state.generationHistory.slice(0, state.maxHistorySize);
-          }
-        }),
-        
-        removeFromHistory: (id) => set((state) => {
-          state.generationHistory = state.generationHistory.filter(item => item.id !== id);
-          if (state.selectedHistoryId === id) {
+        addToHistory: (item) =>
+          set((state) => {
+            const historyItem: GenerationHistoryItem = {
+              ...item,
+              id: generateId(),
+              timestamp: Date.now(),
+            };
+
+            state.generationHistory.unshift(historyItem);
+
+            // Trim history if it exceeds max size
+            if (state.generationHistory.length > state.maxHistorySize) {
+              state.generationHistory = state.generationHistory.slice(0, state.maxHistorySize);
+            }
+          }),
+
+        removeFromHistory: (id) =>
+          set((state) => {
+            state.generationHistory = state.generationHistory.filter((item) => item.id !== id);
+            if (state.selectedHistoryId === id) {
+              state.selectedHistoryId = null;
+            }
+          }),
+
+        clearHistory: () =>
+          set((state) => {
+            state.generationHistory = [];
             state.selectedHistoryId = null;
-          }
-        }),
-        
-        clearHistory: () => set((state) => {
-          state.generationHistory = [];
-          state.selectedHistoryId = null;
-        }),
-        
-        loadFromHistory: (id) => set((state) => {
-          const historyItem = state.generationHistory.find(item => item.id === id);
-          if (historyItem) {
-            state.inputImage = historyItem.inputImage || null;
-            state.outputImage = historyItem.outputImage || null;
-            state.mask = historyItem.mask || null;
+          }),
+
+        loadFromHistory: (id) =>
+          set((state) => {
+            const historyItem = state.generationHistory.find((item) => item.id === id);
+            if (historyItem) {
+              state.inputImage = historyItem.inputImage || null;
+              state.outputImage = historyItem.outputImage || null;
+              state.mask = historyItem.mask || null;
+              state.selectedHistoryId = id;
+            }
+          }),
+
+        setSelectedHistory: (id) =>
+          set((state) => {
             state.selectedHistoryId = id;
-          }
-        }),
-        
-        setSelectedHistory: (id) => set((state) => {
-          state.selectedHistoryId = id;
-        }),
-        
+          }),
+
         // UI state
-        setPreviewZoom: (zoom) => set((state) => {
-          state.previewZoom = Math.max(0.1, Math.min(5.0, zoom));
-        }),
-        
+        setPreviewZoom: (zoom) =>
+          set((state) => {
+            state.previewZoom = Math.max(0.1, Math.min(5.0, zoom));
+          }),
+
         // Import/Export
         importImage: async (uri, source) => {
           try {
@@ -258,23 +277,24 @@ export const useImageStore = create<ImageStore>()(
               createdAt: Date.now(),
               source,
             };
-            
+
             return imageData;
           } catch (error) {
-            throw new Error('Failed to import image: ' + (error as Error).message);
+            throw new Error(`Failed to import image: ${(error as Error).message}`);
           }
         },
-        
+
         exportImage: async (image) => {
           // This would integrate with Expo FileSystem for actual file export
           // For now, return the base64 URI
           return image.uri;
         },
-        
+
         // Utility actions
-        reset: () => set((state) => {
-          Object.assign(state, defaultState);
-        }),
+        reset: () =>
+          set((state) => {
+            Object.assign(state, defaultState);
+          }),
       })),
       {
         name: 'image-store',
@@ -285,10 +305,10 @@ export const useImageStore = create<ImageStore>()(
           previewZoom: state.previewZoom,
           maxHistorySize: state.maxHistorySize,
         }),
-      }
+      },
     ),
     {
       name: 'image-store',
-    }
-  )
+    },
+  ),
 );

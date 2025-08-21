@@ -2,7 +2,7 @@ export const API_ENDPOINTS = {
   // Development endpoints - update these based on your environment
   DEVELOPMENT: 'http://localhost:8000',
   PRODUCTION: 'https://your-production-api.com', // Update with actual production URL
-  
+
   // Default endpoint - will be overridden by environment
   DEFAULT: 'http://localhost:8000',
 } as const;

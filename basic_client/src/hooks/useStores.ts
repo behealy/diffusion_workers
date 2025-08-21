@@ -35,13 +35,14 @@ export const usePanelVisibility = () => useUIStore((state) => state.panelVisibil
 export const useToasts = () => useUIStore((state) => state.toasts);
 
 // Computed selectors
-export const useCanGenerate = () => useGenerationStore((state) => {
-  const hasPrompt = state.prompt.trim().length > 0;
-  const hasValidDimensions = state.dimensions.width > 0 && state.dimensions.height > 0;
-  const notCurrentlyGenerating = !state.isGenerating;
-  
-  return hasPrompt && hasValidDimensions && notCurrentlyGenerating;
-});
+export const useCanGenerate = () =>
+  useGenerationStore((state) => {
+    const hasPrompt = state.prompt.trim().length > 0;
+    const hasValidDimensions = state.dimensions.width > 0 && state.dimensions.height > 0;
+    const notCurrentlyGenerating = !state.isGenerating;
+
+    return hasPrompt && hasValidDimensions && notCurrentlyGenerating;
+  });
 
 export const useCanInpaint = () => {
   const inputImage = useInputImage();
@@ -57,11 +58,11 @@ export const useCanUseImageToImage = () => {
 export const useGenerationButtonText = () => {
   const mode = useGenerationMode();
   const isGenerating = useIsGenerating();
-  
+
   if (isGenerating) {
     return 'Generating...';
   }
-  
+
   switch (mode) {
     case 'text-to-image':
       return 'Generate Image';
@@ -79,7 +80,7 @@ export const useResetAllStores = () => {
   const resetGeneration = useGenerationStore((state) => state.resetToDefaults);
   const resetImages = useImageStore((state) => state.reset);
   const resetUI = useUIStore((state) => state.reset);
-  
+
   return () => {
     resetGeneration();
     resetImages();
@@ -91,7 +92,7 @@ export const useSetupNewGeneration = () => {
   const setMode = useGenerationStore((state) => state.setMode);
   const clearOutputImage = useImageStore((state) => state.clearOutputImage);
   const setGenerating = useGenerationStore((state) => state.setGenerating);
-  
+
   return (mode: 'text-to-image' | 'image-to-image' | 'inpaint') => {
     setMode(mode);
     clearOutputImage();
@@ -104,12 +105,12 @@ export const useStoreDevtools = () => {
   const generationStore = useGenerationStore.getState();
   const imageStore = useImageStore.getState();
   const uiStore = useUIStore.getState();
-  
+
   return {
     generation: generationStore,
     image: imageStore,
     ui: uiStore,
-    
+
     // Helper to log all store states
     logAllStates: () => {
       console.group('Store States');

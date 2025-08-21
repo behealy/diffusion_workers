@@ -31,7 +31,7 @@ export default function RootLayout() {
               headerShown: false, // We'll handle our own headers
             }}
           >
-            <Stack.Screen name="index" options={{ title: 'Home' }} />
+            <Stack.Screen name='index' options={{ title: 'Home' }} />
           </Stack>
         </GestureHandlerRootView>
       </SafeAreaProvider>
