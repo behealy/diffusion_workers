@@ -3,7 +3,6 @@ import type {
   ImageGenerateRequest,
   ImageGenerationResponse,
   MemoryInfoResponse,
-  OpResult,
 } from '../lib/ezdiffusion';
 import { API_ENDPOINTS } from '../constants';
 
@@ -80,7 +79,7 @@ class DiffusionService {
 
   async getMemoryInfo(): Promise<MemoryInfoResponse> {
     try {
-      const response = await this.systemApi.memoryInfo();
+      const response = await this.systemApi.getMemoryInfo();
       return response;
     } catch (error) {
       console.error('Error getting memory info:', error);

@@ -3,7 +3,7 @@ import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { TamaguiProvider } from '@tamagui/core';
+import { TamaguiProvider } from 'tamagui';
 import config from '../../tamagui.config';
 
 export default function RootLayout() {

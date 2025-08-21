@@ -1,13 +1,9 @@
 import React from 'react';
-import { Slider as TamaguiSlider, SliderProps as TamaguiSliderProps, XStack, YStack, Text, styled } from '@tamagui/core';
-import { Input } from './Input';
-import { semanticColors } from '../../constants/tokens';
+import { Slider as TamaguiSlider, SliderProps as TamaguiSliderProps, XStack, YStack, Text, styled, Input } from 'tamagui';
 
 // Custom styled Slider components
 const StyledSlider = styled(TamaguiSlider, {
   name: 'Slider',
-  backgroundColor: semanticColors.background.tertiary,
-  
   variants: {
     disabled: {
       true: {
@@ -18,24 +14,14 @@ const StyledSlider = styled(TamaguiSlider, {
   },
 });
 
-const StyledSliderTrack = styled(TamaguiSlider.Track, {
-  backgroundColor: semanticColors.background.tertiary,
-  borderRadius: '$full',
-  position: 'relative',
-});
+const StyledSliderTrack = styled(TamaguiSlider.Track, {});
 
-const StyledSliderTrackActive = styled(TamaguiSlider.TrackActive, {
-  backgroundColor: '$primary9',
-  borderRadius: '$full',
-});
+const StyledSliderTrackActive = styled(TamaguiSlider.TrackActive, {});
 
 const StyledSliderThumb = styled(TamaguiSlider.Thumb, {
   name: 'SliderThumb',
   size: '$1',
-  backgroundColor: '$primary9',
-  borderRadius: '$full',
   borderWidth: 2,
-  borderColor: '$white12',
   
   hoverStyle: {
     scale: 1.1,
@@ -47,17 +33,11 @@ const StyledSliderThumb = styled(TamaguiSlider.Thumb, {
   
   focusStyle: {
     outlineWidth: 2,
-    outlineColor: '$primary5',
     outlineOffset: 2,
   },
 });
 
-const Label = styled(Text, {
-  fontSize: '$sm',
-  fontWeight: '$medium',
-  color: semanticColors.text.primary,
-  marginBottom: '$xs',
-});
+const Label = styled(Text, {});
 
 export interface SliderProps extends Omit<TamaguiSliderProps, 'value' | 'onValueChange' | 'defaultValue'> {
   value: number;
@@ -133,8 +113,6 @@ export const Slider = React.forwardRef<
       setInputValue(value?.toString() || defaultValue.toString());
     }
   }, [value, defaultValue]);
-  
-  const displayValue = formatValue ? formatValue(value ?? defaultValue) : inputValue;
   
   return (
     <YStack width="100%" disabled={disabled}>
