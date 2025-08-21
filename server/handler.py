@@ -4,7 +4,7 @@ import runpod
 from ez_diffusion_client import ImageGenerateRequest, ImageGenerationParams
 from diffusion_service import DiffusionService
 from pipeline_factory import SDImagePipelineFactory
-from controlnet_preprocessor import MultiModelControlnetParamsFactory
+from controlnet_params_factory import MultiModelControlnetParamsFactory
 
 
 def runpod_handler(job):
