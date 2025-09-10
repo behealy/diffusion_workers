@@ -14,46 +14,46 @@ export interface GenerationParamsPanelProps {
   /** Text prompt describing the desired image */
   prompt: string;
   onPromptChange: (value: string) => void;
-  
+
   /** Negative prompt to avoid unwanted elements */
   negativePrompt?: string;
   onNegativePromptChange: (value: string) => void;
-  
+
   /** HuggingFace model identifier to use for generation */
   baseModel?: string;
   onBaseModelChange: (value: string) => void;
-  
+
   /** How closely to follow the prompt (0.0-20.0, default 7.5) */
-  guidanceScale: number;
+  guidanceScale?: number | null | undefined;
   onGuidanceScaleChange: (value: number) => void;
-  
+
   /** Number of denoising steps (1-100, default 50) */
-  inferenceSteps: number;
+  inferenceSteps?: number | null | undefined;
   onInferenceStepsChange: (value: number) => void;
-  
+
   /** Random seed for reproducible generation */
-  seed?: number;
-  onSeedChange: (value: number | undefined) => void;
-  
+  seed?: number | null | undefined;
+  onSeedChange: (value: number | null) => void;
+
   /** Output image dimensions */
   width: number;
   height: number;
   onWidthChange: (value: number) => void;
   onHeightChange: (value: number) => void;
-  
+
   /** Pipeline optimization settings */
   useDeepCache: boolean;
   onUseDeepCacheChange: (value: boolean) => void;
-  
+
   deepCacheInterval: number;
   onDeepCacheIntervalChange: (value: number) => void;
-  
+
   deepCacheBranchId: number;
   onDeepCacheBranchIdChange: (value: number) => void;
-  
+
   useTorchCompile: boolean;
   onUseTorchCompileChange: (value: boolean) => void;
-  
+
   /** Handler for starting image generation */
   onStartGeneration: () => void;
 }
@@ -87,7 +87,7 @@ export const GenerationParamsPanel: React.FC<GenerationParamsPanelProps> = ({
 }) => {
   const handleSeedChange = (text: string) => {
     if (text === '') {
-      onSeedChange(undefined);
+      onSeedChange(null);
     } else {
       const numValue = parseInt(text, 10);
       if (!isNaN(numValue)) {
@@ -113,7 +113,7 @@ export const GenerationParamsPanel: React.FC<GenerationParamsPanelProps> = ({
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>Generation Parameters</Text>
-      
+
       {/* Prompt */}
       <View style={styles.fieldContainer}>
         <Text style={styles.label}>Prompt *</Text>
@@ -152,30 +152,34 @@ export const GenerationParamsPanel: React.FC<GenerationParamsPanelProps> = ({
       </View>
 
       {/* Guidance Scale - Using Slider */}
-      <View style={styles.fieldContainer}>
-        <Slider
-          label="Guidance Scale"
-          value={guidanceScale}
-          onValueChange={onGuidanceScaleChange}
-          min={0.0}
-          max={20.0}
-          step={0.1}
-          showInput={true}
-        />
-      </View>
+      {guidanceScale && (
+        <View style={styles.fieldContainer}>
+          <Slider
+            label="Guidance Scale"
+            value={guidanceScale}
+            onValueChange={onGuidanceScaleChange}
+            min={0.0}
+            max={20.0}
+            step={0.1}
+            showInput={true}
+          />
+        </View>
+      )}
 
       {/* Inference Steps - Using Slider */}
-      <View style={styles.fieldContainer}>
-        <Slider
-          label="Inference Steps"
-          value={inferenceSteps}
-          onValueChange={onInferenceStepsChange}
-          min={1}
-          max={100}
-          step={1}
-          showInput={true}
-        />
-      </View>
+      {inferenceSteps && (
+        <View style={styles.fieldContainer}>
+          <Slider
+            label="Inference Steps"
+            value={inferenceSteps}
+            onValueChange={onInferenceStepsChange}
+            min={1}
+            max={100}
+            step={1}
+            showInput={true}
+          />
+        </View>
+      )}
 
       {/* Seed */}
       <View style={styles.fieldContainer}>
@@ -218,7 +222,7 @@ export const GenerationParamsPanel: React.FC<GenerationParamsPanelProps> = ({
       {/* Pipeline Optimizations Section */}
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionTitle}>Pipeline Optimizations</Text>
-        
+
         {/* Use DeepCache */}
         <View style={styles.switchContainer}>
           <Text style={styles.switchLabel}>Use DeepCache</Text>
