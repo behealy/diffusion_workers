@@ -1,4 +1,7 @@
+import { HistoryState } from "./HistoryState";
+import { PendingImageGenParamsState } from "./PendingImageGenParamsState";
+
 // Export all Zustand stores from this directory
-export * from './generationStore';
-export * from './imageStore';
-export * from './uiStore';
+export type GenerationStore = PendingImageGenParamsState & HistoryState
+
+export { useGenerationStore } from './generationStore';

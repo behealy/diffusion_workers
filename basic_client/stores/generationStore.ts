@@ -1,265 +1,188 @@
-import { create } from 'zustand';
+import { create, StateCreator } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
-import type {
+import diffusionService from '@/services/diffusionService';
+import {
   ControlNetParams,
   ImageGenerationParams,
   ImageGenerationParamsDimensions,
   ImageGenerationParamsPipelineOptimizations,
+  ImageGenerationResponse,
+  ImageToImageParams,
   LoraParams,
+  OpStatus,
 } from '../lib/ezdiffusion';
+import { createHistoryState } from './historyStore';
+import { MiddlewareEnabledStateCreator } from '../types';
+import { GenerationStore } from '.';
+import { PendingImageGenParamsState } from './PendingImageGenParamsState';
 
-// Generation parameter types
-export interface GenerationState {
-  // Core generation parameters
-  prompt: string;
-  negativePrompt: string;
-  dimensions: ImageGenerationParamsDimensions;
-  inferenceSteps: number;
-  guidanceScale: number;
-  seed: number | null;
 
-  // Pipeline optimizations
-  pipelineOptimizations: ImageGenerationParamsPipelineOptimizations;
+const stagedParamsDefaults = {
+    prompt: '',
+    negativePrompt: '',
+    dimensions: {
+      width: 1024,
+      height: 1024,
+    },
+    inferenceSteps: 20,
+    guidanceScale: 7.5,
+    seed: null,
+    pipelineOptimizations: {
+      useDeepcache: false,
+      useTorchCompile: false,
+    },
+    loras: [],
+    controlnets: [],
+    baseModel: 'Lykon/dreamshaper-8',
+  }
 
-  // Modifiers
-  loras: LoraParams[];
-  controlnets: ControlNetParams[];
+const createPendingImageGenParamsState: MiddlewareEnabledStateCreator<GenerationStore, PendingImageGenParamsState> = (set, get, store) => ({
+  stagedParams: stagedParamsDefaults,
 
-  // Generation mode
-  mode: 'text-to-image' | 'image-to-image' | 'inpaint';
-
-  // Image-to-image specific
-  strength: number;
-
-  // Model selection
-  modelId: string;
-
-  // Loading state
-  isGenerating: boolean;
-  generationProgress: number;
-}
-
-export interface GenerationActions {
   // Basic parameter setters
-  setPrompt: (prompt: string) => void;
-  setNegativePrompt: (negativePrompt: string) => void;
-  setDimensions: (dimensions: Partial<ImageGenerationParamsDimensions>) => void;
-  setInferenceSteps: (steps: number) => void;
-  setGuidanceScale: (scale: number) => void;
-  setSeed: (seed: number | null) => void;
-  setStrength: (strength: number) => void;
-  setModelId: (modelId: string) => void;
+  setPrompt: (prompt) =>
+    set((state) => {
+      state.stagedParams.prompt = prompt;
+    }),
 
-  // Mode management
-  setMode: (mode: GenerationState['mode']) => void;
+  setNegativePrompt: (negativePrompt) =>
+    set((state) => {
+      state.stagedParams.negativePrompt = negativePrompt;
+    }),
+
+  setDimensions: (dimensions) =>
+    set((state) => {
+      state.stagedParams.dimensions = { ...state.stagedParams.dimensions, ...dimensions };
+    }),
+
+  setInferenceSteps: (steps) =>
+    set((state) => {
+      state.stagedParams.inferenceSteps = steps;
+    }),
+
+  setGuidanceScale: (scale) =>
+    set((state) => {
+      state.stagedParams.guidanceScale = scale;
+    }),
+
+  setSeed: (seed) =>
+    set((state) => {
+      state.stagedParams.seed = seed;
+    }),
+
+  setBaseModel: (modelId) =>
+    set((state) => {
+      state.stagedParams.baseModel = modelId;
+    }),
 
   // Pipeline optimizations
-  setPipelineOptimizations: (
-    optimizations: Partial<ImageGenerationParamsPipelineOptimizations>,
-  ) => void;
+  setPipelineOptimizations: (optimizations) =>
+    set((state) => {
+      state.stagedParams.pipelineOptimizations = { ...state.stagedParams.pipelineOptimizations, ...optimizations };
+    }),
 
-  // Modifier management
-  addLora: (lora: LoraParams) => void;
-  updateLora: (index: number, lora: Partial<LoraParams>) => void;
-  removeLora: (index: number) => void;
-  clearLoras: () => void;
+  // LoRA management
+  addLora: (lora) =>
+    set((state) => {
+      state.stagedParams.loras?.push(lora);
+    }),
 
-  addControlNet: (controlNet: ControlNetParams) => void;
-  updateControlNet: (index: number, controlNet: Partial<ControlNetParams>) => void;
-  removeControlNet: (index: number) => void;
-  clearControlNets: () => void;
+  updateLora: (index, lora) =>
+    set((state) => {
+      if (state.stagedParams.loras?.at(index)) {
+        state.stagedParams.loras[index] = { ...state.stagedParams.loras[index], ...lora };
+      }
+    }),
 
-  // Generation state
-  setGenerating: (isGenerating: boolean) => void;
-  setGenerationProgress: (progress: number) => void;
+  removeLora: (index) =>
+    set((state) => {
+      state.stagedParams.loras?.splice(index, 1);
+    }),
+
+  clearLoras: () =>
+    set((state) => {
+      state.stagedParams.loras = [];
+    }),
+
+  // ControlNet management
+  addControlNet: (controlNet) =>
+    set((state) => {
+      state.stagedParams.controlnets?.push(controlNet);
+    }),
+
+  updateControlNet: (index, controlNet) =>
+    set((state) => {
+      if (state.stagedParams.controlnets?.at(index)) {
+        state.stagedParams.controlnets[index] = { ...state.stagedParams.controlnets[index], ...controlNet };
+      }
+    }),
+
+  removeControlNet: (index) =>
+    set((state) => {
+      state.stagedParams.controlnets?.splice(index, 1);
+    }),
+
+  clearControlNets: () =>
+    set((state) => {
+      state.stagedParams.controlnets = [];
+    }),
 
   // Utility actions
-  resetToDefaults: () => void;
-  buildGenerationParams: () => ImageGenerationParams;
-}
+  resetToDefaults: () =>
+    set((state) => {
+      Object.assign(state, stagedParamsDefaults);
+    }),
 
-export type GenerationStore = GenerationState & GenerationActions;
+  startGeneration: async () => {
+    const stagedParams = get().stagedParams;
+    get().addPendingItemToHistory(stagedParams, OpStatus.Pending)
 
-// Default state
-const defaultState: GenerationState = {
-  prompt: '',
-  negativePrompt: '',
-  dimensions: {
-    width: 1024,
-    height: 1024,
+    try {
+      const response = await diffusionService.generateImage({
+        input: stagedParams
+      })
+
+      if (response.result) {
+        const history = await diffusionService.getHistory({
+          index: 0,
+          length: 10
+        })
+        set((state) => {
+          state.generationHistory = history.results
+        })
+      }
+    } catch (error) {
+      get().addPendingItemToHistory(stagedParams, OpStatus.Failure)
+    }
   },
-  inferenceSteps: 20,
-  guidanceScale: 7.5,
-  seed: null,
-  pipelineOptimizations: {
-    useDeepcache: false,
-    deepcacheInterval: undefined,
-    deepcacheBranchId: undefined,
-    useTorchCompile: false,
-  },
-  loras: [],
-  controlnets: [],
-  mode: 'text-to-image',
-  strength: 0.8,
-  modelId: 'Lykon/dreamshaper-8',
-  isGenerating: false,
-  generationProgress: 0,
-};
+})
+
+
+
 
 export const useGenerationStore = create<GenerationStore>()(
   devtools(
     persist(
-      immer((set, get) => ({
-        ...defaultState,
-
-        // Basic parameter setters
-        setPrompt: (prompt) =>
-          set((state) => {
-            state.prompt = prompt;
-          }),
-
-        setNegativePrompt: (negativePrompt) =>
-          set((state) => {
-            state.negativePrompt = negativePrompt;
-          }),
-
-        setDimensions: (dimensions) =>
-          set((state) => {
-            state.dimensions = { ...state.dimensions, ...dimensions };
-          }),
-
-        setInferenceSteps: (steps) =>
-          set((state) => {
-            state.inferenceSteps = steps;
-          }),
-
-        setGuidanceScale: (scale) =>
-          set((state) => {
-            state.guidanceScale = scale;
-          }),
-
-        setSeed: (seed) =>
-          set((state) => {
-            state.seed = seed;
-          }),
-
-        setStrength: (strength) =>
-          set((state) => {
-            state.strength = strength;
-          }),
-
-        setModelId: (modelId) =>
-          set((state) => {
-            state.modelId = modelId;
-          }),
-
-        // Mode management
-        setMode: (mode) =>
-          set((state) => {
-            state.mode = mode;
-          }),
-
-        // Pipeline optimizations
-        setPipelineOptimizations: (optimizations) =>
-          set((state) => {
-            state.pipelineOptimizations = { ...state.pipelineOptimizations, ...optimizations };
-          }),
-
-        // LoRA management
-        addLora: (lora) =>
-          set((state) => {
-            state.loras.push(lora);
-          }),
-
-        updateLora: (index, lora) =>
-          set((state) => {
-            if (state.loras[index]) {
-              state.loras[index] = { ...state.loras[index], ...lora };
-            }
-          }),
-
-        removeLora: (index) =>
-          set((state) => {
-            state.loras.splice(index, 1);
-          }),
-
-        clearLoras: () =>
-          set((state) => {
-            state.loras = [];
-          }),
-
-        // ControlNet management
-        addControlNet: (controlNet) =>
-          set((state) => {
-            state.controlnets.push(controlNet);
-          }),
-
-        updateControlNet: (index, controlNet) =>
-          set((state) => {
-            if (state.controlnets[index]) {
-              state.controlnets[index] = { ...state.controlnets[index], ...controlNet };
-            }
-          }),
-
-        removeControlNet: (index) =>
-          set((state) => {
-            state.controlnets.splice(index, 1);
-          }),
-
-        clearControlNets: () =>
-          set((state) => {
-            state.controlnets = [];
-          }),
-
-        // Generation state
-        setGenerating: (isGenerating) =>
-          set((state) => {
-            state.isGenerating = isGenerating;
-            if (!isGenerating) {
-              state.generationProgress = 0;
-            }
-          }),
-
-        setGenerationProgress: (progress) =>
-          set((state) => {
-            state.generationProgress = progress;
-          }),
-
-        // Utility actions
-        resetToDefaults: () =>
-          set((state) => {
-            Object.assign(state, defaultState);
-          }),
-
-        buildGenerationParams: (): ImageGenerationParams => {
-          const state = get();
-          return {
-            prompt: state.prompt,
-            negativePrompt: state.negativePrompt || undefined,
-            dimensions: state.dimensions,
-            inferenceSteps: state.inferenceSteps,
-            guidanceScale: state.guidanceScale,
-            seed: state.seed || undefined,
-            pipelineOptimizations: state.pipelineOptimizations,
-            loras: state.loras.length > 0 ? state.loras : undefined,
-            controlnets: state.controlnets.length > 0 ? state.controlnets : undefined,
-            modelId: state.modelId,
-            strength: state.mode === 'image-to-image' ? state.strength : undefined,
-          };
-        },
+      immer((set, get, store) => ({
+        ...createHistoryState(set, get, store),
+        ...createPendingImageGenParamsState(set, get, store)
       })),
       {
         name: 'generation-store',
         // Only persist user preferences, not transient state
-        partialize: (state) => ({
-          dimensions: state.dimensions,
-          inferenceSteps: state.inferenceSteps,
-          guidanceScale: state.guidanceScale,
-          pipelineOptimizations: state.pipelineOptimizations,
-          strength: state.strength,
-          modelId: state.modelId,
-        }),
+        partialize: (state) => {
+          const params = state.stagedParams;
+          return {
+            stagedParams: {
+              dimensions: params.dimensions,
+              inferenceSteps: params.inferenceSteps,
+              guidanceScale: params.guidanceScale,
+              pipelineOptimizations: params.pipelineOptimizations,
+              baseModel: params.baseModel
+            }
+          }
+        }
       },
     ),
     {

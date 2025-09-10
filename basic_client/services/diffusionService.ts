@@ -1,6 +1,9 @@
 import { Configuration, ImageGenerationApi, SystemApi } from '@/lib/ezdiffusion';
 import type {
+  GetImageGenHistory200Response,
+  GetImageGenHistoryRequest,
   ImageGenerateRequest,
+  ImageGenerationHistoryResponse,
   ImageGenerationResponse,
   MemoryInfoResponse,
 } from '@/lib/ezdiffusion';
@@ -14,6 +17,7 @@ class DiffusionService {
   constructor(baseUrl?: string) {
     this.configuration = new Configuration({
       basePath: baseUrl || this.getApiEndpoint(),
+      fetchApi: fetch,
     });
 
     this.imageGenApi = new ImageGenerationApi(this.configuration);
@@ -31,12 +35,27 @@ class DiffusionService {
 
   async generateImage(request: ImageGenerateRequest): Promise<ImageGenerationResponse> {
     try {
-      const response = await this.imageGenApi.generateImage({
-        imageGenerateRequest: request,
-      });
+      let response
+      if (request.input.imageToImage) {
+        response = this.imageToImage(request);
+      } else if (request.input.inpaint) {
+        response = this.inpaint(request);
+      } else {
+        response = this.textToImage(request);
+      }
       return response;
     } catch (error) {
       console.error('Error generating image:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async getHistory(request: GetImageGenHistoryRequest): Promise<ImageGenerationHistoryResponse> {
+    try {
+      const response = await this.imageGenApi.getImageGenHistory(request);
+      return response;
+    } catch (error) {
+      console.error('Error in text-to-image generation:', error);
       throw this.handleError(error);
     }
   }
@@ -107,7 +126,7 @@ class DiffusionService {
 }
 
 // Export a singleton instance
-export const diffusionService = new DiffusionService();
+export default new DiffusionService();
 
 // Export the class for custom instances if needed
 export { DiffusionService };

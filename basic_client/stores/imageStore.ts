@@ -45,42 +45,19 @@ export interface ImageState {
   brushSize: number;
   isDrawing: boolean;
 
-  // Generation history
-  generationHistory: GenerationHistoryItem[];
-  maxHistorySize: number;
-
-  // UI state
-  selectedHistoryId: string | null;
   showMask: boolean;
   previewZoom: number;
 }
 
 export interface ImageActions {
-  // Input image management
-  setInputImage: (image: ImageData | null) => void;
-  clearInputImage: () => void;
-
   // Output image management
   setOutputImage: (image: ImageData | null) => void;
   clearOutputImage: () => void;
-  useOutputAsInput: () => void;
-
-  // Mask management
-  setMask: (mask: MaskData | null) => void;
-  clearMask: () => void;
-  updateMask: (maskData: string) => void;
 
   // Canvas drawing
   setBrushSize: (size: number) => void;
   setIsDrawing: (isDrawing: boolean) => void;
-  setShowMask: (show: boolean) => void;
-
-  // History management
-  addToHistory: (item: Omit<GenerationHistoryItem, 'id' | 'timestamp'>) => void;
-  removeFromHistory: (id: string) => void;
-  clearHistory: () => void;
-  loadFromHistory: (id: string) => void;
-  setSelectedHistory: (id: string | null) => void;
+  setShowMask: (show: boolean) => void
 
   // UI state
   setPreviewZoom: (zoom: number) => void;
@@ -97,14 +74,11 @@ export type ImageStore = ImageState & ImageActions;
 
 // Default state
 const defaultState: ImageState = {
-  inputImage: null,
   outputImage: null,
+  inputImage: null,
   mask: null,
   brushSize: 20,
   isDrawing: false,
-  generationHistory: [],
-  maxHistorySize: 50,
-  selectedHistoryId: null,
   showMask: true,
   previewZoom: 1.0,
 };
@@ -133,23 +107,6 @@ export const useImageStore = create<ImageStore>()(
     persist(
       immer((set) => ({
         ...defaultState,
-
-        // Input image management
-        setInputImage: (image) =>
-          set((state) => {
-            state.inputImage = image;
-            // Clear mask when input image changes
-            if (image && state.mask) {
-              state.mask = null;
-            }
-          }),
-
-        clearInputImage: () =>
-          set((state) => {
-            state.inputImage = null;
-            state.mask = null;
-          }),
-
         // Output image management
         setOutputImage: (image) =>
           set((state) => {
@@ -170,31 +127,6 @@ export const useImageStore = create<ImageStore>()(
             }
           }),
 
-        // Mask management
-        setMask: (mask) =>
-          set((state) => {
-            state.mask = mask;
-          }),
-
-        clearMask: () =>
-          set((state) => {
-            state.mask = null;
-          }),
-
-        updateMask: (maskData) =>
-          set((state) => {
-            if (state.inputImage) {
-              state.mask = {
-                id: generateId(),
-                uri: maskData,
-                width: state.inputImage.width,
-                height: state.inputImage.height,
-                brushSize: state.brushSize,
-                createdAt: Date.now(),
-              };
-            }
-          }),
-
         // Canvas drawing
         setBrushSize: (size) =>
           set((state) => {
@@ -209,53 +141,6 @@ export const useImageStore = create<ImageStore>()(
         setShowMask: (show) =>
           set((state) => {
             state.showMask = show;
-          }),
-
-        // History management
-        addToHistory: (item) =>
-          set((state) => {
-            const historyItem: GenerationHistoryItem = {
-              ...item,
-              id: generateId(),
-              timestamp: Date.now(),
-            };
-
-            state.generationHistory.unshift(historyItem);
-
-            // Trim history if it exceeds max size
-            if (state.generationHistory.length > state.maxHistorySize) {
-              state.generationHistory = state.generationHistory.slice(0, state.maxHistorySize);
-            }
-          }),
-
-        removeFromHistory: (id) =>
-          set((state) => {
-            state.generationHistory = state.generationHistory.filter((item) => item.id !== id);
-            if (state.selectedHistoryId === id) {
-              state.selectedHistoryId = null;
-            }
-          }),
-
-        clearHistory: () =>
-          set((state) => {
-            state.generationHistory = [];
-            state.selectedHistoryId = null;
-          }),
-
-        loadFromHistory: (id) =>
-          set((state) => {
-            const historyItem = state.generationHistory.find((item) => item.id === id);
-            if (historyItem) {
-              state.inputImage = historyItem.inputImage || null;
-              state.outputImage = historyItem.outputImage || null;
-              state.mask = historyItem.mask || null;
-              state.selectedHistoryId = id;
-            }
-          }),
-
-        setSelectedHistory: (id) =>
-          set((state) => {
-            state.selectedHistoryId = id;
           }),
 
         // UI state
@@ -303,7 +188,6 @@ export const useImageStore = create<ImageStore>()(
           brushSize: state.brushSize,
           showMask: state.showMask,
           previewZoom: state.previewZoom,
-          maxHistorySize: state.maxHistorySize,
         }),
       },
     ),

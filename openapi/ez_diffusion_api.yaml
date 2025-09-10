@@ -27,8 +27,39 @@ servers:
       endpoint_id:
         description: Your RunPod endpoint ID
         default: your-endpoint-id
-
+  
 paths:
+  /history:
+    get:
+      summary: Get image generation history
+      operationId: getImageGenHistory
+      tags:
+        - Image Generation
+      parameters:
+        - name: index
+          in: query
+          description: Starting index for pagination
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: length
+          in: query
+          description: Number of entries to return
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageGenerationHistoryResponse'
+        '400':
+          description: Bad request (e.g., invalid parameters)
+
   /inpaint: 
      post:
       summary: Alias of /image-gen with additional validation specific to inpaint requests
@@ -361,7 +392,6 @@ components:
           description: generates an image from only the control input (canny edge, depth map, pose, etc.) and without guidance from a prompt.
           default: false
         guide_image:
-          type: string
           description: Control image 
           $ref: '#/components/schemas/ImageInput'
         needs_preprocess:
@@ -489,6 +519,8 @@ components:
       type: string
       enum:
         - PENDING
+        - QUEUED
+        - IN_PROGRESS
         - SUCCESS
         - FAILURE
       description: Operation status
@@ -515,30 +547,40 @@ components:
     ImageGenerationResponse:
       type: object
       required:
-        - prompt
-        - seed
-        - warnings
+        - input
+        - job_id
       properties:
-        image:
+        input: 
+          $ref: '#/components/schemas/ImageGenerationParams'
+        job_id: 
           type: string
-          description: Base64 encoded generated image or url (production mode)
-          format: byte
-        status:
-          type: string
-          description: Generation status (local debug mode)
-          example: "success"
-        prompt:
-          type: string
-          description: Final prompt used for generation (may include LoRA tags)
-        seed:
-          type: integer
-          format: int64
-          description: Seed used for generation
+          description: The id of this generation task.
+        status: 
+          $ref: '#/components/schemas/OpStatus'
+        result:
+          $ref: '#/components/schemas/ImageInput'
         warnings:
+          nullable: true
           type: array
           description: Any warnings or non-fatal errors during generation
           items:
             $ref: '#/components/schemas/OpResult'
+    
+    ImageGenerationHistoryResponse: 
+      type: object
+      required:
+        - prev
+        - next
+        - results
+      properties:
+        prev: 
+          type: integer
+        next:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImageGenerationResponse'
 
     MemoryInfoResponse:
       type: object
