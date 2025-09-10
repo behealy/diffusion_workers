@@ -12,6 +12,7 @@ export { useGenerationStore, useImageStore, useUIStore };
 
 // Specific selectors for commonly used state slices
 export const useStagedGenerationParamsState = () => useGenerationStore((state) => state.stagedParams);
+export const useHistoryListState = () => useGenerationStore(state => state.generationHistory)
 
 // export const useInputImage = () => useImageStore((state) => state.inputImage);
 // export const useOutputImage = () => useImageStore((state) => state.outputImage);

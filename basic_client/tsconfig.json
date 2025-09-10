@@ -12,10 +12,12 @@
     "baseUrl": ".",
     "paths": {
       "@/app": ["app/*"],
+      "@/components": ["components"],
       "@/components/*": ["components/*"],
       "@/screens/*": ["screens/*"],
       "@/hooks/*": ["hooks/*"],
       "@/stores/*": ["stores/*"],
+      "@/stores": ["stores"],
       "@/services/*": ["services/*"],
       "@/utils/*": ["utils/*"],
       "@/types/*": ["types/*"],
