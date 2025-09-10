@@ -1,2 +1,6 @@
-// Export all TypeScript type definitions from this directory
-// Example: export type { GenerationParams } from './generation';
+import { StateCreator } from "zustand";
+
+export type MiddlewareEnabledStateCreator<
+    I,
+    O
+> = StateCreator<I, [["zustand/devtools", never], ["zustand/persist", unknown], ["zustand/immer", never]], [], O>;
