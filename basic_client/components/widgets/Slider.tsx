@@ -1,54 +1,8 @@
 import React from 'react';
-import {
-  Input,
-  Slider as TamaguiSlider,
-  SliderProps as TamaguiSliderProps,
-  Text,
-  XStack,
-  YStack,
-  styled,
-} from 'tamagui';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
+import RNSlider from '@react-native-community/slider';
 
-// Custom styled Slider components
-const StyledSlider = styled(TamaguiSlider, {
-  name: 'Slider',
-  variants: {
-    disabled: {
-      true: {
-        opacity: 0.5,
-        pointerEvents: 'none',
-      },
-    },
-  },
-});
-
-const StyledSliderTrack = styled(TamaguiSlider.Track, {});
-
-const StyledSliderTrackActive = styled(TamaguiSlider.TrackActive, {});
-
-const StyledSliderThumb = styled(TamaguiSlider.Thumb, {
-  name: 'SliderThumb',
-  size: '$1',
-  borderWidth: 2,
-
-  hoverStyle: {
-    scale: 1.1,
-  },
-
-  pressStyle: {
-    scale: 1.05,
-  },
-
-  focusStyle: {
-    outlineWidth: 2,
-    outlineOffset: 2,
-  },
-});
-
-const Label = styled(Text, {});
-
-export interface SliderProps
-  extends Omit<TamaguiSliderProps, 'value' | 'onValueChange' | 'defaultValue'> {
+export interface SliderProps {
   value: number;
   onValueChange: (value: number) => void;
   defaultValue?: number;
@@ -59,118 +13,141 @@ export interface SliderProps
   showInput?: boolean;
   disabled?: boolean;
   formatValue?: (value: number) => string;
-  size?: '$1' | '$2' | '$3' | '$4' | '$5';
 }
 
-export const Slider = React.forwardRef<React.ElementRef<typeof StyledSlider>, SliderProps>(
-  (
-    {
-      value,
-      onValueChange,
-      defaultValue = 0,
-      min = 0,
-      max = 100,
-      step = 1,
-      label,
-      showInput = true,
-      disabled = false,
-      formatValue,
-      size = '$4',
-      ...props
+export const Slider: React.FC<SliderProps> = ({
+  value,
+  onValueChange,
+  defaultValue = 0,
+  min = 0,
+  max = 100,
+  step = 1,
+  label,
+  showInput = true,
+  disabled = false,
+  formatValue,
+}) => {
+  const [inputValue, setInputValue] = React.useState(
+    value?.toString() || defaultValue.toString(),
+  );
+
+  // Handle slider value change
+  const handleSliderChange = React.useCallback(
+    (newValue: number) => {
+      onValueChange(newValue);
+      setInputValue(newValue.toString());
     },
-    ref,
-  ) => {
-    const [inputValue, setInputValue] = React.useState(
-      value?.toString() || defaultValue.toString(),
-    );
+    [onValueChange],
+  );
 
-    // Convert single value to array for Tamagui Slider (which supports multiple thumbs)
-    const sliderValue = [value ?? defaultValue];
+  // Handle input change
+  const handleInputChange = React.useCallback(
+    (text: string) => {
+      setInputValue(text);
 
-    // Handle slider value change
-    const handleSliderChange = React.useCallback(
-      (values: number[]) => {
-        const newValue = values[0];
-        onValueChange(newValue);
-        setInputValue(newValue.toString());
-      },
-      [onValueChange],
-    );
-
-    // Handle input change
-    const handleInputChange = React.useCallback(
-      (text: string) => {
-        setInputValue(text);
-
-        const numValue = parseFloat(text);
-        if (!isNaN(numValue)) {
-          const clampedValue = Math.max(min, Math.min(max, numValue));
-          onValueChange(clampedValue);
-        }
-      },
-      [min, max, onValueChange],
-    );
-
-    // Handle input blur (validate and correct value)
-    const handleInputBlur = React.useCallback(() => {
-      const numValue = parseFloat(inputValue);
-      if (isNaN(numValue)) {
-        setInputValue(value?.toString() || defaultValue.toString());
-      } else {
+      const numValue = parseFloat(text);
+      if (!isNaN(numValue)) {
         const clampedValue = Math.max(min, Math.min(max, numValue));
-        setInputValue(clampedValue.toString());
-        if (clampedValue !== value) {
-          onValueChange(clampedValue);
-        }
+        onValueChange(clampedValue);
       }
-    }, [inputValue, value, defaultValue, min, max, onValueChange]);
+    },
+    [min, max, onValueChange],
+  );
 
-    // Update input value when prop value changes
-    React.useEffect(() => {
-      if (document.activeElement?.tagName !== 'INPUT') {
-        setInputValue(value?.toString() || defaultValue.toString());
+  // Handle input blur (validate and correct value)
+  const handleInputBlur = React.useCallback(() => {
+    const numValue = parseFloat(inputValue);
+    if (isNaN(numValue)) {
+      setInputValue(value?.toString() || defaultValue.toString());
+    } else {
+      const clampedValue = Math.max(min, Math.min(max, numValue));
+      setInputValue(clampedValue.toString());
+      if (clampedValue !== value) {
+        onValueChange(clampedValue);
       }
-    }, [value, defaultValue]);
+    }
+  }, [inputValue, value, defaultValue, min, max, onValueChange]);
 
-    return (
-      <YStack width='100%' disabled={disabled}>
-        {label && <Label>{label}</Label>}
+  // Update input value when prop value changes
+  React.useEffect(() => {
+    setInputValue(value?.toString() || defaultValue.toString());
+  }, [value, defaultValue]);
 
-        <XStack alignItems='center' gap='$md' width='100%'>
-          <StyledSlider
-            ref={ref}
-            size={size}
-            value={sliderValue}
-            onValueChange={handleSliderChange}
-            min={min}
-            max={max}
-            step={step}
-            disabled={disabled}
-            orientation='horizontal'
-            flex={1}
-            {...props}
-          >
-            <StyledSliderTrack>
-              <StyledSliderTrackActive />
-            </StyledSliderTrack>
-            <StyledSliderThumb index={0} circular />
-          </StyledSlider>
+  return (
+    <View style={[styles.container, disabled && styles.disabled]}>
+      {label && <Text style={styles.label}>{label}</Text>}
 
-          {showInput && (
-            <Input
-              size='sm'
-              value={inputValue}
-              onChangeText={handleInputChange}
-              onBlur={handleInputBlur}
-              disabled={disabled}
-              width={80}
-              textAlign='center'
-            />
-          )}
-        </XStack>
-      </YStack>
-    );
+      <View style={styles.sliderRow}>
+        <RNSlider
+          style={styles.slider}
+          value={value ?? defaultValue}
+          onValueChange={handleSliderChange}
+          minimumValue={min}
+          maximumValue={max}
+          step={step}
+          disabled={disabled}
+          minimumTrackTintColor="#007AFF"
+          maximumTrackTintColor="#E5E5EA"
+        />
+
+        {showInput && (
+          <TextInput
+            style={[styles.input, disabled && styles.inputDisabled]}
+            value={inputValue}
+            onChangeText={handleInputChange}
+            onBlur={handleInputBlur}
+            editable={!disabled}
+            keyboardType="numeric"
+          />
+        )}
+      </View>
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    width: '100%',
   },
-);
+  disabled: {
+    opacity: 0.5,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 8,
+    color: '#000',
+  },
+  sliderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+  },
+  slider: {
+    flex: 1,
+    height: 40,
+    marginRight: 12,
+  },
+  thumb: {
+    backgroundColor: '#007AFF',
+    width: 20,
+    height: 20,
+  },
+  input: {
+    width: 80,
+    height: 40,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    textAlign: 'center',
+    fontSize: 14,
+    backgroundColor: '#fff',
+  },
+  inputDisabled: {
+    backgroundColor: '#F2F2F7',
+    color: '#8E8E93',
+  },
+});
 
 Slider.displayName = 'Slider';

@@ -22,7 +22,6 @@ our requirements.
 | -------------------------------- | -------- | ------------------------- | --------------------------------------------------------- |
 | **Expo**                         | ~51.0.0  | Cross-platform framework  | File-based routing, easy deployment, universal APIs       |
 | **React Native Skia**            | ^1.3.0   | Graphics & Canvas Drawing | GPU-accelerated drawing, image masking, 60fps performance |
-| **Tamagui**                      | ^1.112.0 | UI Component Library      | Performance-focused, web compatibility, utility styling   |
 | **Expo Router**                  | ~3.5.0   | Navigation                | File-based routing, web support, simplified setup         |
 | **React Native Reanimated**      | ~3.10.0  | Animations                | Works with Skia, smooth interactions                      |
 | **React Native Gesture Handler** | ~2.16.0  | Touch Interactions        | Canvas drawing gestures, pan/pinch                        |
@@ -122,29 +121,58 @@ our requirements.
 
 #### Task 8: Input Image Panel Component
 
-- [ ] Create image picker integration with Expo Document Picker
-- [ ] Implement image display with proper aspect ratio handling
-- [ ] Build image preview component with zoom/pan capabilities
-- [ ] Add file validation and error handling
+Create a react native component (known as the Input Image panel) that can allow for the selection of an image to upload, and can show the preview of the uploaded image, as well as allow for the user to draw a mask over the image.
+
+# Input image panel
+The input image panel should allow users to select an image from the file system or a local directory, and display it here. If no image is selected, no starting image will be used in image generation and the GENERATION REQUEST will be made with the `/text-to-image` call.
+
+IF an input image is selected, it MUST be sent with the GENERATION REQUEST in the `ImageToImageParams` as a base64 string with the `/image-to-image` call.
+
+IF an imput image is selected, AND a mask is drawn, the GENERATION REQUEST MUST be made with the `/inpaint` call and the image is to be sent as a base64 string in the `InpaintParams`.
+
+## Input image panel feature: Mask drawing
+If an input image has been selected, the user should be able to draw a mask onto the image. There should be a size slider control below the image that allows the user to adjust the size of the brush being used to draw the mask onto the image. When the user draws a mask, the mask should show over the top of the input image in the places it was drawn, in black.
+
+- The drawing should be accomplished using @shopify/react-native-skia
+- The image that is uploaded should be shown in the skia canvas.
+- The selection of the image should be accomplished with Expo Document Picker
+- We are using tamagui for various UI widgets
+- There should be a slider widget to control the size of the mask drawing paintbrush
+- Drawing should have gesture handling with smooth strokes if on touch screen.
+- If on touchscreen, and the user has a stylus, such as an apple pencil, then the drawing input should be made with that.
+- On web, the drawing input can be made with mouse presses.
+
 
 #### Task 9: Canvas Mask Drawing System
-
+<!-- 
 - [ ] Integrate React Native Skia canvas component
 - [ ] Implement brush drawing with configurable size
 - [ ] Create mask overlay system (black mask over image)
 - [ ] Add brush size slider control
-- [ ] Implement drawing gesture handling with smooth strokes
+- [ ] Implement drawing gesture handling with smooth strokes -->
 
 #### Task 10: Output Image Panel Component
-
+The output image panel MUST display the image that resulted from the last image generation call. Below the actual image, there MUST be a button that allows the user to then move that output image to be used as the next image input, and show up in the input image panel.
 - [ ] Create image display component for generated results
 - [ ] Implement "Use as Input" button functionality
-- [ ] Add image saving/sharing capabilities
 - [ ] Create loading states during generation
 
 #### Task 11: Generation Control Panel
+Create a GenerationParamsPanel component in components folder. It will mostly be a form that meets the following requirments:
 
-- [ ] Build dynamic form system using React Hook Form
+The generation control panel is a form that will show a list of controls for the next image generation operation. 
+The input fields within this panel will be displayed from top to bottom. The input fields will correspond to the parameters at the ROOT of the `ImageGenerationParams` schema object. Remember the EZ diffusion api schema in /Users/bhealy/Documents/code/runpod/diffusion_workers/openapi/ez_diffusion_api.yaml when considering this.
+
+Certain numerical input params MUST use the Slider widget component for setting their values:
+- guidance_scale
+- inference_steps
+
+Include a section for pipeline_optimizations.
+
+DO NOT include controls related to image-to-image, inpaint, controlnet, or loras.
+
+The component must be a stateless functional component.
+
 - [ ] Create input components for all generation parameters
 - [ ] Implement form validation based on OpenAPI schemas
 - [ ] Add parameter presets and quick settings

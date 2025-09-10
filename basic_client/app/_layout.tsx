@@ -3,13 +3,11 @@ import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { TamaguiProvider } from 'tamagui';
-import config from '../tamagui.config';
 
 export default function RootLayout() {
   const [loaded] = useFonts({
-    Inter: require('@tamagui/font-inter/otf/Inter-Medium.otf'),
-    InterBold: require('@tamagui/font-inter/otf/Inter-Bold.otf'),
+    // Inter: require('@tamagui/font-inter/otf/Inter-Medium.otf'),
+    // InterBold: require('@tamagui/font-inter/otf/Inter-Bold.otf'),
   });
 
   useEffect(() => {
@@ -23,7 +21,6 @@ export default function RootLayout() {
   }
 
   return (
-    <TamaguiProvider config={config}>
       <SafeAreaProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>
           <Stack
@@ -35,6 +32,5 @@ export default function RootLayout() {
           </Stack>
         </GestureHandlerRootView>
       </SafeAreaProvider>
-    </TamaguiProvider>
   );
 }
