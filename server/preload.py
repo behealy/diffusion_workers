@@ -1,6 +1,7 @@
-from server.pipeline_factory import SDImagePipelineFactory
+from pipeline_factory import SDImagePipelineFactory
 import argparse
 import torch
+import yaml
 from diffusers import AutoPipeline, ControlNetModel
 
 
@@ -55,6 +56,17 @@ def load_models_from_manifest(file_path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Preload pipelines")
-    parser.add_argument("--manifest", default="model_loading/sd15_extended.yaml", help="manifest file")
+    # parser.add_argument("--manifest", default="model_loading/sd15_extended.yaml", help="manifest file")
+    # args = parser.parse_args()
+    # SdxlControlnetUnionPipelineWrapper(args.model)
+
+    parser.add_argument("--handler_type", default="test", help="The handler type that should be started")
     args = parser.parse_args()
-    SdxlControlnetUnionPipelineWrapper(args.model)
+    if args.handler_type == "image":
+        # TODO
+        pass
+    elif args.handler_type == "video":
+        from videogen_service import VideoGenService
+        video_gen_service = VideoGenService()
+        result = video_gen_service.load_models()
+
