@@ -3,12 +3,13 @@ FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
 RUN apt-get update && apt-get install -y wget
 
 # Install uv
-RUN wget -qO- https://astral.sh/uv/install.sh | sh && source $HOME/.local/bin/env
+RUN wget -qO- https://astral.sh/uv/install.sh | sh
+ENV PATH="$PATH:/root/.local/bin"
 
 COPY pyproject.toml /pyproject.toml
-COPY requirements.txt /requirements.txt
-COPY src /src
-RUN uv install -r /requirements.txt
+COPY .python-version /.python-version
+# COPY src /src
+COPY handler.py /handler.py
 
 # Start the serverless handler
-CMD ["uv", "run", "/src/handler.py"]
+CMD ["uv", "run", "/handler.py"]
