@@ -80,7 +80,7 @@ class ControlnetParamsFactory(ABC):
     
         images = [self.__load_image(
             cn.needs_preprocess or False, 
-            cn.guide_image, 
+            cn.guide_image.source, 
             { "processor_to_use": cn.processor_type, "desired_width": input.dimensions.width }
         ) for cn in input.controlnets]
 

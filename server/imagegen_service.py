@@ -18,7 +18,7 @@ from ez_diffusion_client import ImageGenerateRequest, ImageGenerationParams
 from models import OpStatus
 # from preload import load_models_from_manifest
 
-class DiffusionService:
+class ImageGenService:
     def __init__(
             self, 
             pipeline_factory: PipelineFactory,
@@ -130,7 +130,7 @@ if __name__ == "__main__":
         pipe_wrapper = SDImagePipelineFactory(base_model=args.model)
         controlnet_params_factory = MultiModelControlnetParamsFactory()
 
-    diff_service = DiffusionService(
+    diff_service = ImageGenService(
         pipeline_factory=pipe_wrapper,
         controlnet_params_factory=controlnet_params_factory,
         local_debug=True
