@@ -1,2 +1,8 @@
 // Export all components from this directory
-export * from './ui';
+export * from './widgets';
+
+import InputImagePanel from './InputImagePanel';
+
+export {
+      InputImagePanel,
+};
