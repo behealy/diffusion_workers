@@ -11,7 +11,8 @@ import base64
 import runpod
 import uvicorn
 from fastapi import FastAPI, HTTPException, responses
-from pipeline_factory import FluxFp16ControlNetUnionGetter, PipelineFactory, SDImagePipelineFactory, SD15Fp16ControlNetGetter, SDXLFp16ControlNetUnionGetter
+from pipeline_factory import PipelineFactory, SDImagePipelineFactory
+from controlnet_factory import FluxFp16ControlNetUnionGetter,  SD15Fp16ControlNetGetter, SDXLFp16ControlNetUnionGetter
 from controlnet_params_factory import MultiModelControlnetParamsFactory, ControlnetUnionParamsFactory, ControlnetParamsFactory
 from utils import get_memory_info, load_image_from_base64_or_url, print_memory_info, resolve_device
 from ez_diffusion_client import ImageGenerateRequest, ImageGenerationParams

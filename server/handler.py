@@ -3,11 +3,12 @@ import runpod
 
 from ez_diffusion_client import ImageGenerateRequest, ImageGenerationParams
 from imagegen_service import ImageGenService
-from pipeline_factory import SDImagePipelineFactory, SDXLFp16ControlNetUnionGetter
+from pipeline_factory import SDImagePipelineFactory
+from controlnet_factory import SDXLFp16ControlNetUnionGetter
 from controlnet_params_factory import MultiModelControlnetParamsFactory, ControlnetUnionParamsFactory
 
 
-def imagegen_handler(job):
+def sdxl_handler(job):
     """RunPod serverless handler function."""
     try:
         input_data = job.get("input", {})
@@ -69,9 +70,9 @@ if __name__ == "__main__":
             "handler": test_handler,
             "return_aggregate_stream": True
         })
-    elif args.handler_type == "image":
+    elif args.handler_type == "sdxl":
         runpod.serverless.start({
-            "handler": imagegen_handler,
+            "handler": sdxl_handler,
             "return_aggregate_stream": True
         })
 
