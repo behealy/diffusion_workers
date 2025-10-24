@@ -14,4 +14,6 @@ dependencies = [
     "peft>=0.17.0",
     "controlnet-aux>=0.0.10",
     "deepcache>=0.1.1",
+    "huggingface-hub>=0.34.3",
+    "hf-transfer>=0.1.9",
 ]
