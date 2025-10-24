@@ -44,6 +44,7 @@ class LTXVideoService(RPWorkerInferenceService):
         # self.pipe.to(resolve_device())
         # self.pipe_upsample.to(resolve_device())
         # self.pipe.vae.enable_tiling()
+        pass
 
     def rp_worker_generate(self, job) -> Any:
         return self.generate(job.get("input"))
