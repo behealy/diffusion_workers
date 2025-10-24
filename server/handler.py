@@ -83,6 +83,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--rp_api_port", type=int, default=8000, help="Port to start the FastAPI server on."
     )
+    # Test input
+    parser.add_argument(
+        "--test_input",
+        type=str,
+        default=None,
+        help="Test input for the worker, formatted as JSON.",
+    )
+
     args = parser.parse_args()
 
     manifests_folder = os.environ.get("WORKFLOW_MANIFESTS_FOLDER", "model_loading")
