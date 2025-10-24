@@ -73,6 +73,16 @@ if __name__ == "__main__":
     import yaml
     parser = argparse.ArgumentParser(description="Run main handler")
     parser.add_argument("--manifest", default="basic", help="The manifest that defines what pipelines the service should run")
+    # Hosted API
+    parser.add_argument(
+        "--rp_serve_api",
+        action="store_true",
+        default=None,
+        help="Flag to start the API server.",
+    )
+    parser.add_argument(
+        "--rp_api_port", type=int, default=8000, help="Port to start the FastAPI server on."
+    )
     args = parser.parse_args()
 
     manifests_folder = os.environ.get("WORKFLOW_MANIFESTS_FOLDER", "model_loading")
