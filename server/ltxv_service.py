@@ -26,7 +26,7 @@ class LTXVideoService(RPWorkerInferenceService):
         self.local_debug = local_debug
 
         self.pipe = LTXImageToVideoPipeline.from_pretrained("Lightricks/LTX-Video-0.9.8-13B-distilled", torch_dtype=torch.bfloat16)
-        self.pipe.enable_model_cpu_offload()
+        # self.pipe.enable_model_cpu_offload()
 
         self.pipe.transformer.enable_group_offload(onload_device=onload_device, offload_device=offload_device, offload_type="leaf_level")
         self.pipe.vae.enable_group_offload(onload_device=onload_device, offload_type="leaf_level")
@@ -67,9 +67,11 @@ class LTXVideoService(RPWorkerInferenceService):
             negative_prompt = "worst quality, inconsistent motion, blurry, jittery, distorted"
             filename = p.get("filename", f"{prompt[:72]}_{datetime.datetime.now()}.mp4")
 
+            image = load_image(start_image)
+
             video = self.pipe(
                 prompt=prompt,
-                image=start_image,
+                image=image,
                 negative_prompt=negative_prompt,
                 height=height,
                 width=width,
