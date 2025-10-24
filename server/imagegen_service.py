@@ -8,18 +8,20 @@ from diffusers.models.controlnets.controlnet import ControlNetModel
 from PIL import Image
 from io import BytesIO
 import base64
+from pydantic import ValidationError
 import runpod
 import uvicorn
 from fastapi import FastAPI, HTTPException, responses
 from pipeline_factory import PipelineFactory, SDImagePipelineFactory
 from controlnet_factory import FluxFp16ControlNetUnionGetter,  SD15Fp16ControlNetGetter, SDXLFp16ControlNetUnionGetter
 from controlnet_params_factory import MultiModelControlnetParamsFactory, ControlnetUnionParamsFactory, ControlnetParamsFactory
+from inference_service import RPWorkerInferenceService
 from utils import get_memory_info, load_image_from_base64_or_url, print_memory_info, resolve_device
 from ez_diffusion_client import ImageGenerateRequest, ImageGenerationParams
 from models import OpStatus
 # from preload import load_models_from_manifest
 
-class ImageGenService:
+class ImageGenService(RPWorkerInferenceService):
     def __init__(
             self, 
             pipeline_factory: PipelineFactory,
@@ -29,6 +31,14 @@ class ImageGenService:
        self.pipeline_factory = pipeline_factory
        self.local_debug = local_debug
        self.controlnet_params_factory = controlnet_params_factory
+
+    def warmup(self):
+        return super().warmup()
+    
+    def rp_worker_generate(self, job) -> Any:
+        input = job.get("input", {})
+        req = ImageGenerateRequest(input=ImageGenerationParams(**input))
+        return self.generate(req.input)
 
     def generate(
         self,
@@ -96,9 +106,6 @@ class ImageGenService:
             if self.local_debug:
                 print(f"Problem occured: {e}")
             raise e
-
-
-
 
 if __name__ == "__main__":
     import argparse
@@ -202,3 +209,4 @@ if __name__ == "__main__":
     
     print(f"Starting local development server on {args.host}:{args.port}")
     uvicorn.run(app, host=args.host, port=args.port)
+

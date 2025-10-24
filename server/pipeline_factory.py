@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from ez_diffusion_client import LoraParams, ImageGenerationParams, ControlNetParams, CNProcessorType
 from functools import lru_cache
 from DeepCache import DeepCacheSDHelper
-from controlnet_factory import ControlNetFactory, SD15Fp16ControlNetGetter
+from controlnet_factory import ControlNetFactory, SD15Fp16ControlNetGetter, SDXLFp16ControlNetUnionGetter
 
 
 class PipelineFactory(ABC):
@@ -58,8 +58,7 @@ class PipelineFactory(ABC):
     @abstractmethod
     def setup(self, input: ImageGenerationParams, pipekwargs, response) -> tuple[dict, dict]:
         pass
-   
-    
+
 class SDImagePipelineFactory(PipelineFactory):
     def __init__(
         self, 
@@ -162,4 +161,3 @@ class SDImagePipelineFactory(PipelineFactory):
             cn_model_names = []
         
         return self.__get_pipeline(pipetype, *cn_model_names)
-        
