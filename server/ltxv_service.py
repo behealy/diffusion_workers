@@ -21,6 +21,7 @@ class LTXVideoService(RPWorkerInferenceService):
         self.local_debug = local_debug
         self.pipe = LTXImageToVideoPipeline.from_pretrained("Lightricks/LTX-Video-0.9.8-13B-distilled", torch_dtype=torch.bfloat16)
         path = hf_hub_download("Lightricks/LTX-Video", filename="ltxv-spatial-upscaler-0.9.8.safetensors")
+        print(f"LTX UPSAMPLE PATH: {path}")
         upsampler = LTXLatentUpsamplerModel.from_pretrained(path)
         self.pipe_upsample = LTXLatentUpsamplePipeline(latent_upsampler=upsampler , vae=self.pipe.vae)
 
