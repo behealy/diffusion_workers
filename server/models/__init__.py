@@ -1,4 +1,3 @@
-from tkinter.tix import TEXT
 from .opresult import *
 
 # 0 -- openpose
