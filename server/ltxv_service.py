@@ -12,6 +12,7 @@ from typing import List, Optional, Dict, Any
 import numpy as np
 from inference_service import RPWorkerInferenceService
 from utils import get_memory_info, load_image_from_base64_or_url, print_memory_info, resolve_device
+from pathlib import Path
 
 class LTXVideoService(RPWorkerInferenceService):
     def __init__(
@@ -20,7 +21,7 @@ class LTXVideoService(RPWorkerInferenceService):
     ):
         self.local_debug = local_debug
         self.pipe = LTXImageToVideoPipeline.from_pretrained("Lightricks/LTX-Video-0.9.8-13B-distilled", torch_dtype=torch.bfloat16)
-        path = hf_hub_download("Lightricks/LTX-Video", filename="ltxv-spatial-upscaler-0.9.8.safetensors")
+        path = Path(hf_hub_download("Lightricks/LTX-Video", filename="ltxv-spatial-upscaler-0.9.8.safetensors")).parent
         print(f"LTX UPSAMPLE PATH: {path}")
         upsampler = LTXLatentUpsamplerModel.from_pretrained(path)
         self.pipe_upsample = LTXLatentUpsamplePipeline(latent_upsampler=upsampler , vae=self.pipe.vae)
