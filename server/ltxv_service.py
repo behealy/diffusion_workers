@@ -3,6 +3,7 @@ import torch
 from diffusers import LTXImageToVideoPipeline, LTXPipeline, LTXConditionPipeline, LTXLatentUpsamplePipeline
 from diffusers.pipelines.ltx.modeling_latent_upsampler import LTXLatentUpsamplerModel
 from diffusers.utils import export_to_video, load_image
+from diffusers.hooks import apply_group_offloading
 import datetime
 from enum import Enum
 import os
@@ -10,6 +11,7 @@ import torch
 import random
 from typing import List, Optional, Dict, Any
 import numpy as np
+from transformers import T5EncoderModel
 from inference_service import RPWorkerInferenceService
 from utils import get_memory_info, load_image_from_base64_or_url, print_memory_info, resolve_device
 from pathlib import Path
@@ -19,15 +21,27 @@ class LTXVideoService(RPWorkerInferenceService):
         self,
         local_debug: bool = False
     ):
+        onload_device = torch.device("cuda")
+        offload_device = torch.device("cpu")
         self.local_debug = local_debug
+
         self.pipe = LTXImageToVideoPipeline.from_pretrained("Lightricks/LTX-Video-0.9.8-13B-distilled", torch_dtype=torch.bfloat16)
+        self.pipe.enable_model_cpu_offload()
+
+        self.pipe.transformer.enable_group_offload(onload_device=onload_device, offload_device=offload_device, offload_type="leaf_level")
+        self.pipe.vae.enable_group_offload(onload_device=onload_device, offload_type="leaf_level")
+
+        # Use the apply_group_offloading method for other model components
+        apply_group_offloading(self.pipe.text_encoder, onload_device=onload_device, offload_type="block_level", num_blocks_per_group=2)
+
+
         # path = Path(hf_hub_download("Lightricks/LTX-Video", filename="ltxv-spatial-upscaler-0.9.8.safetensors")).parent
         # print(f"LTX UPSAMPLE PATH: {path}")
         # upsampler = LTXLatentUpsamplerModel.from_pretrained(path)
         # self.pipe_upsample = LTXLatentUpsamplePipeline(latent_upsampler=upsampler , vae=self.pipe.vae)
 
     def warmup(self): 
-        self.pipe.to(resolve_device())
+        # self.pipe.to(resolve_device())
         # self.pipe_upsample.to(resolve_device())
         # self.pipe.vae.enable_tiling()
 
