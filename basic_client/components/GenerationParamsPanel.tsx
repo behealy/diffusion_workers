@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -95,6 +95,8 @@ export const GenerationParamsPanel: React.FC<GenerationParamsPanelProps> = ({
       }
     }
   };
+
+  const hasPrompt = useMemo(() => prompt?.trim().length === 0, [prompt]);
 
   const handleWidthChange = (text: string) => {
     const numValue = parseInt(text, 10);
@@ -287,14 +289,14 @@ export const GenerationParamsPanel: React.FC<GenerationParamsPanelProps> = ({
         <TouchableOpacity
           style={[
             styles.generateButton,
-            prompt.trim().length === 0 && styles.generateButtonDisabled
+            hasPrompt && styles.generateButtonDisabled
           ]}
           onPress={onStartGeneration}
-          disabled={prompt.trim().length === 0}
+          disabled={hasPrompt}
         >
           <Text style={[
             styles.generateButtonText,
-            prompt.trim().length === 0 && styles.generateButtonTextDisabled
+            hasPrompt && styles.generateButtonTextDisabled
           ]}>
             Generate Image
           </Text>

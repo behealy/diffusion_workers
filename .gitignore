@@ -127,7 +127,7 @@ ipython_config.py
 
 server/test_inputs/
 
-openapi/client_libs/
+openapi/client_libs/typescript/
 web_gen_client/
 
 # pixi

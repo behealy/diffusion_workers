@@ -5,20 +5,20 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default function RootLayout() {
-  const [loaded] = useFonts({
-    // Inter: require('@tamagui/font-inter/otf/Inter-Medium.otf'),
-    // InterBold: require('@tamagui/font-inter/otf/Inter-Bold.otf'),
-  });
+  // const [loaded] = useFonts({
+  //   Inter: require('@tamagui/font-inter/otf/Inter-Medium.otf'),
+  //   InterBold: require('@tamagui/font-inter/otf/Inter-Bold.otf'),
+  // });
 
-  useEffect(() => {
-    if (loaded) {
-      // Hide splash screen when fonts are loaded
-    }
-  }, [loaded]);
+  // useEffect(() => {
+  //   if (loaded) {
+  //     // Hide splash screen when fonts are loaded
+  //   }
+  // }, [loaded]);
 
-  if (!loaded) {
-    return null;
-  }
+  // if (!loaded) {
+  //   return null;
+  // }
 
   return (
       <SafeAreaProvider>
