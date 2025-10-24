@@ -13,11 +13,15 @@ function build_openapi() {
     openapi-generator-cli generate -i "$SCHEMA_PATH" -g python -o $OPENAPI_CLIENT_LIBS_DIR/python --package-name ez_diffusion_client
 }
 
-function install_openapi_lib_debug() {
-    build_openapi
+function debug_add_server_model_lib() {
     cd server
     uv pip install -e ../$OPENAPI_CLIENT_LIBS_DIR/python --config-settings editable_mode=compat
     cd -
+}
+
+function install_openapi_lib_debug() {
+    build_openapi
+    debug_add_server_model_lib
 
     rm -rf basic_client/lib/ezdiffusion
     mkdir -p basic_client/lib/ezdiffusion
@@ -34,6 +38,8 @@ function install_openapi_lib() {
    
 if [[ "$1" == "install_openapi_lib" ]]; then
     install_openapi_lib
+elif [[ "$1" == "debug_add_server_model_lib" ]]; then
+    debug_add_server_model_lib
 else
     install_openapi_lib_debug
 fi
