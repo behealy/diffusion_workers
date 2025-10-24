@@ -44,7 +44,7 @@ export const GenerationParamsPanelContainer: React.FC = () => {
 
   return (
     <GenerationParamsPanel
-      prompt={stagedParams.prompt || ''}
+      prompt={stagedParams.prompt}
       onPromptChange={setPrompt}
       negativePrompt={stagedParams.negativePrompt || ''}
       onNegativePromptChange={setNegativePrompt}
