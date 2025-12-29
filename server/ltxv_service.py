@@ -1,6 +1,6 @@
 from huggingface_hub import hf_hub_download
 import torch
-from diffusers import LTXImageToVideoPipeline, LTXPipeline, LTXConditionPipeline, LTXLatentUpsamplePipeline
+from diffusers import LTXImageToVideoPipeline, LTXPipeline, LTXConditionPipeline, LTXLatentUpsamplePipeline, LTXVideoTransformer3DModel, GGUFQuantizationConfig
 from diffusers.pipelines.ltx.modeling_latent_upsampler import LTXLatentUpsamplerModel
 from diffusers.utils import export_to_video, load_image
 from diffusers.hooks import apply_group_offloading
@@ -25,14 +25,36 @@ class LTXVideoService(RPWorkerInferenceService):
         offload_device = torch.device("cpu")
         self.local_debug = local_debug
 
-        self.pipe = LTXImageToVideoPipeline.from_pretrained("Lightricks/LTX-Video-0.9.8-13B-distilled", torch_dtype=torch.bfloat16)
+        transformer = LTXVideoTransformer3DModel.from_single_file(
+            "https://huggingface.co/calcuis/ltxv-gguf/blob/main/ltxv-13b-0.9.8-distilled-q8_0.gguf", # 14 GB
+            quantization_config=GGUFQuantizationConfig(compute_dtype=torch.bfloat16),
+            torch_dtype=torch.bfloat16,
+        )
+
+        text_encoder = T5EncoderModel.from_pretrained(
+            "calcuis/ltxv-gguf", # 2.9 GB
+            gguf_file="t5xxl_fp16-q4_0.gguf",
+            torch_dtype=torch.bfloat16,
+        )
+
+        pipe = LTXPipeline.from_pretrained(
+            "callgg/ltxv-decoder", # VAE, 1.68 GB
+            text_encoder=text_encoder,
+            transformer=transformer,
+            torch_dtype=torch.bfloat16
+        ).to("cuda")
+
+        self.pipe = pipe
+
+
+        # self.pipe = LTXImageToVideoPipeline.from_pretrained("Lightricks/LTX-Video-0.9.8-13B-distilled", torch_dtype=torch.bfloat16)
         # self.pipe.enable_model_cpu_offload()
 
-        self.pipe.transformer.enable_group_offload(onload_device=onload_device, offload_device=offload_device, offload_type="leaf_level")
-        self.pipe.vae.enable_group_offload(onload_device=onload_device, offload_type="leaf_level")
+        # self.pipe.transformer.enable_group_offload(onload_device=onload_device, offload_device=offload_device, offload_type="leaf_level")
+        # self.pipe.vae.enable_group_offload(onload_device=onload_device, offload_type="leaf_level")
 
         # Use the apply_group_offloading method for other model components
-        apply_group_offloading(self.pipe.text_encoder, onload_device=onload_device, offload_type="block_level", num_blocks_per_group=2)
+        # apply_group_offloading(self.pipe.text_encoder, onload_device=onload_device, offload_type="block_level", num_blocks_per_group=2)
 
 
         # path = Path(hf_hub_download("Lightricks/LTX-Video", filename="ltxv-spatial-upscaler-0.9.8.safetensors")).parent
@@ -59,7 +81,7 @@ class LTXVideoService(RPWorkerInferenceService):
             start_image = p.pop("start_image")
             upscale = p.get("upscale", 1)
             height = p.get("height", 480)
-            width = p.get("width", 720)
+            width = p.get("width", 768)
             num_frames = p.get("num_frames", 81)
             fps = p.get("fps", 16)
             num_inference_steps = p.get("num_inference_steps", 30)
