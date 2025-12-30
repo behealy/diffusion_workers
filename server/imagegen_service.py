@@ -46,8 +46,9 @@ class ImageGenService(RPWorkerInferenceService):
     ) -> Dict[str, Any]:
         """Generate an image based on the provided parameters."""
         try:
-            controlnets = input_params.controlnets
-
+            if self.local_debug:
+                print('starting job with the following inputs:')
+                print(input_params)
             if input_params.seed is not None:
                 seed = input_params.seed
             else: 
@@ -56,7 +57,7 @@ class ImageGenService(RPWorkerInferenceService):
             generator = torch.Generator(device=resolve_device()).manual_seed(seed)
 
             prompt = input_params.prompt
-            kwargs = {**input_params.dimensions.to_dict(), "prompt": prompt}
+            kwargs = {**input_params.dimensions.to_dict()}
             response = {"prompt": prompt, "seed": seed, "warnings": []}
 
             (kwargs, response) = self.pipeline_factory.setup(input_params, kwargs, response)
@@ -99,7 +100,7 @@ class ImageGenService(RPWorkerInferenceService):
                 # Convert to base64
                 buffer = BytesIO()
                 image.save(buffer, format="PNG")
-                img_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
+                img_str = f"data:image/jpeg;base64,{base64.b64encode(buffer.getvalue()).decode('utf-8')}"
                 return {"image": img_str, **response}
 
         except Exception as e:
