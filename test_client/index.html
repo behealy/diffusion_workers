@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diffusion Workers Test Client</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <div class="header-top">
+        <h1>🎨 Diffusion Workers Test Client</h1>
+        <div class="server-config">
+          <label for="server-url">Server:</label>
+          <input type="text" id="server-url" value="http://localhost:8000" style="width: 250px; margin-right: 10px;">
+          <button id="refresh-memory-btn">Refresh Memory</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="tabs" id="tabs-container"></div>
+
+    <div class="content-section active" id="text2image-section">
+      <div class="card">
+        <h2>Text to Image</h2>
+        <form id="form-text-to-image">
+          <div class="preset-buttons">
+            <button type="button" class="preset-btn" onclick="applyPreset('SDXL')">SDXL (1024×1024)</button>
+            <button type="button" class="preset-btn" onclick="applyPreset('SD1.5')">SD1.5 (512×512)</button>
+          </div>
+          
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="text-to-image-prompt">Prompt *</label>
+              <textarea id="text-to-image-prompt" required></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label>Negative Prompt</label>
+              <input type="text" id="text-to-image-negative-prompt" placeholder="blurry, low quality...">
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="text-to-image-dimensions">Dimensions</label>
+              <select id="text-to-image-dimensions" onchange="updateFromPreset()">
+                <option value="1024,1024">1024 × 1024 (SDXL)</option>
+                <option value="512,512">512 × 512 (Standard)</option>
+                <option value="768,512">768 × 512 (Landscape)</option>
+                <option value="512,768">512 × 768 (Portrait)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="text-to-image-seed">Seed</label>
+              <input type="number" id="text-to-image-seed" placeholder="Random">
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group slider-group">
+              <span>Inference Steps:</span>
+              <input type="range" id="text-to-image-steps-min" min="1" max="100" value="20" style="flex: 0.5;">
+              <span id="text-to-image-steps-val">20</span>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group slider-group">
+              <span>Guidance Scale:</span>
+              <input type="range" id="text-to-image-guidance-min" min="1" max="20" value="7.5" step="0.5" style="flex: 0.5;">
+              <span id="text-to-image-guidance-val">7.5</span>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button type="submit" class="btn" id="text-to-image-generate-btn">Generate Image</button>
+            <button type="button" class="btn btn-secondary" onclick="resetText2Image()">Reset Form</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="content-section" id="i2i-section">
+      <div class="card">
+        <h2>Image to Image</h2>
+        <form id="form-image-to-image">
+          <div class="form-group">
+            <label>Prompt *</label>
+            <textarea id="image-to-image-prompt" required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Negative Prompt</label>
+            <input type="text" id="image-to-image-negative-prompt" placeholder="blurry, low quality...">
+          </div>
+
+          <div class="form-group">
+            <label>Starting Image *</label>
+            <div class="drop-zone" data-drop-target="starting_image" id="i2i-drop-zone">
+              <div class="drop-zone-content">
+                <div class="drop-zone-icon">📁</div>
+                <div class="drop-zone-text">Drop image here</div>
+                <div class="drop-zone-hint">or click to select</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group slider-group">
+            <span>I2D Strength:</span>
+            <input type="range" id="image-to-image-strength-min" min="0" max="1" step="0.1" value="0.8" style="flex: 0.5;">
+            <span id="image-to-image-strength-val">0.8</span>
+          </div>
+
+          <div class="controls">
+            <button type="submit" class="btn" id="image-to-image-generate-btn">Generate Image</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="content-section" id="inpaint-section">
+      <div class="card">
+        <h2>Inpainting</h2>
+        <form id="form-inpainting">
+          <div class="form-group">
+            <label>Prompt *</label>
+            <textarea id="inpaint-prompt" required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Negative Prompt</label>
+            <input type="text" id="inpaint-negative-prompt" placeholder="blurry, low quality...">
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Starting Image *</label>
+              <div class="drop-zone" data-drop-target="starting_image" id="inpaint-start-drop-zone" style="border-color: var(--success);">
+                <div class="drop-zone-content">
+                  <div class="drop-zone-icon">📁</div>
+                  <div class="drop-zone-text">Drop starting image here</div>
+                  <div class="drop-zone-hint">or click to select</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Mask Image *</label>
+              <div class="drop-zone" data-drop-target="mask" id="inpaint-mask-drop-zone" style="border-color: var(--error);">
+                <div class="drop-zone-content">
+                  <div class="drop-zone-icon">🎭</div>
+                  <div class="drop-zone-text">Drop mask image here</div>
+                  <div class="drop-zone-hint">or click to select (white = inpaint area)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button type="submit" class="btn" id="inpaint-generate-btn">Generate Inpainted Image</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="content-section" id="controlnet-section">
+      <div class="card">
+        <h2>ControlNet</h2>
+        <form id="form-controlnet">
+          <div class="form-group">
+            <label>Prompt *</label>
+            <textarea id="controlnet-prompt" required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Negative Prompt</label>
+            <input type="text" id="controlnet-negative-prompt" placeholder="blurry, low quality...">
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label>ControlNet Model</label>
+              <select id="controlnet-model">
+                <option value="">Select a ControlNet model...</option>
+                <option value="canny">Canny Edge Detection</option>
+                <option value="depth_midas">Depth (MiDaS)</option>
+                <option value="depth_leres">Depth (Leres)</option>
+                <option value="openpose">OpenPose (Full Body)</option>
+                <option value="lineart_anime">Anime LineArt</option>
+                <option value="segmentation">Segmentation</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="controlnet-width">Width</label>
+              <input type="number" id="controlnet-width" placeholder="512">
+            </div>
+
+            <div class="form-group">
+              <label for="controlnet-height">Height</label>
+              <input type="number" id="controlnet-height" placeholder="512">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Control Image *</label>
+            <div class="drop-zone" data-drop-target="control_image" id="controlnet-image-drop-zone">
+              <div class="drop-zone-content">
+                <div class="drop-zone-icon">📁</div>
+                <div class="drop-zone-text">Drop control image here (e.g., pose sketch, depth map)</div>
+                <div class="drop-zone-hint">or click to select</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group slider-group">
+            <span>Conditioning Scale:</span>
+            <input type="range" id="controlnet-scale-min" min="0" max="2" step="0.1" value="0.8" style="flex: 0.5;">
+            <span id="controlnet-scale-val">0.8</span>
+          </div>
+
+          <div class="controls">
+            <button type="submit" class="btn" id="controlnet-generate-btn">Generate Controlled Image</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="content-section" id="lora-section">
+      <div class="card">
+        <h2>LoRA Testing</h2>
+        <form id="form-lora">
+          <div class="form-group">
+            <label>Prompt *</label>
+            <textarea id="lora-prompt" required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Negative Prompt</label>
+            <input type="text" id="lora-negative-prompt" placeholder="blurry, low quality...">
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="lora-model">LoRA Model URL</label>
+              <input type="url" id="lora-model" placeholder="https://huggingface.co/author/lora-id">
+            </div>
+
+            <div class="form-group">
+              <label for="lora-weight-name">Weight Name</label>
+              <input type="text" id="lora-weight-name" placeholder="style.safetensors">
+            </div>
+
+            <div class="form-group">
+              <label for="lora-scale">Scale</label>
+              <input type="number" id="lora-scale" step="0.1" value="0.8" min="0" max="3">
+            </div>
+
+            <div class="form-group">
+              <label for="lora-tag">Trigger Tag (Optional)</label>
+              <input type="text" id="lora-tag" placeholder="<lora:style name:1.0>">
+            </div>
+          </div>
+
+          <div class="controls">
+            <button type="submit" class="btn" id="lora-generate-btn">Generate with LoRA</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="content-section" id="history-section">
+      <div class="card">
+        <h2>Generation History</h2>
+        <p style="color: var(--text-muted); margin-bottom: 15px;">Recent generations will appear here. Images are stored locally in your browser.</p>
+        
+        <table class="history-table" id="history-table">
+          <thead>
+            <tr>
+              <th>Image</th>
+              <th>Prompt</th>
+              <th>Dimensions</th>
+            </tr>
+          </thead>
+          <tbody class="results-container"></tbody>
+        </table>
+
+        <div id="history-pagination" class="pagination" style="display: none;">
+          <!-- Pagination controls injected here -->
+        </div>
+
+        <button type="button" class="btn btn-secondary reset-form-btn" onclick="resetForm()" style="margin-top: 15px; display: none;"></button>
+      </div>
+    </div>
+
+    <div class="content-section" id="memory-section">
+      <div class="card">
+        <h2>Memory Information</h2>
+        <div class="memory-container">
+          <!-- Memory cards will be injected here -->
+          <button type="button" class="btn btn-secondary" onclick="loadMemoryInfo()">Load Info</button>
+          <p style="color: var(--text-muted); margin-top: 10px;">Click "Load Info" to fetch memory statistics from the server.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Result Modal -->
+  <div class="modal-overlay" id="result-modal">
+    <div class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Generated Image</h3>
+          <button class="close-modal" onclick="closeModal()">×</button>
+        </div>
+        <img id="modal-image" src="" alt="Generated image" class="modal-image">
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Area -->
+  <div id="notification-area" class="notification-area"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
