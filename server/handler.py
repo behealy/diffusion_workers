@@ -10,48 +10,55 @@ from controlnet_params_factory import MultiModelControlnetParamsFactory, Control
 from ltxv_service import LTXVideoService
 from wan_videogen_service import WanVideoGenService
 
+class Manifest: 
+    def __init__(self, manifest, args):
+        self.manifest = manifest
+        self.use_debug_mode_for_service = args.local_debug_mode
 
-def get_handler_type_from_manifest(manifest):
-    handler_type = None
-    if manifest:
-        handler_type = manifest.get("base_model_type", None)
-    return handler_type
+    def get_handler_type_from_manifest(self):
+        manifest = self.manifest
+        handler_type = None
+        if manifest:
+            handler_type = manifest.get("base_model_type", None)
+        return handler_type
 
-def get_service_params_from_manifest(manifest):
-    handler_type = get_handler_type_from_manifest(manifest)
-    base_model = "Lykon/dreamshaper-8"
-    if manifest: 
-        pipes: List[Any] = manifest.get("pipelines", [])
-        base_model = next((p.get("hf_repo") for p in pipes if p.get("hf_repo")), base_model)
+    def get_service_params_from_manifest(self):
+        manifest = self.manifest
+        handler_type = self.get_handler_type_from_manifest()
+        base_model = "Lykon/dreamshaper-8"
+        if manifest:
+            pipes: List[Any] = manifest.get("base_models", [])
+            base_model = next((p.get("hf_repo") for p in pipes if p.get("hf_repo")), base_model)
 
-    if handler_type == "sdxl":
-        return { 
-            "base_model": base_model,
-            "pipeline_factory": SDImagePipelineFactory(
-                base_model=base_model,
-                get_controlnet=SDXLFp16ControlNetUnionGetter()
-            ),
-            "controlnet_params_factory": ControlnetUnionParamsFactory()
-        }
-    else:
-        return {
-            "base_model": base_model,
-            "pipeline_factory": SDImagePipelineFactory(
-                base_model=base_model,
-                get_controlnet=SD15Fp16ControlNetGetter()
-            ),
-            "controlnet_params_factory": MultiModelControlnetParamsFactory()
-        }
-    
-def get_service_from_manifest(manifest):
-    params = get_service_params_from_manifest(manifest)
-    try:
-        return ImageGenService(
-            pipeline_factory=params.pop("pipeline_factory"),
-            controlnet_params_factory=params.pop("controlnet_params_factory")
-        )
-    except KeyError as e:
-        return None
+        if handler_type == "sdxl":
+            return { 
+                "base_model": base_model,
+                "pipeline_factory": SDImagePipelineFactory(
+                    base_model=base_model,
+                    get_controlnet=SDXLFp16ControlNetUnionGetter()
+                ),
+                "controlnet_params_factory": ControlnetUnionParamsFactory()
+            }
+        else:
+            return {
+                "base_model": base_model,
+                "pipeline_factory": SDImagePipelineFactory(
+                    base_model=base_model,
+                    get_controlnet=SD15Fp16ControlNetGetter(),
+                ),
+                "controlnet_params_factory": MultiModelControlnetParamsFactory()
+            }
+        
+    def get_service_from_manifest(self):
+        params = self.get_service_params_from_manifest()
+        try:
+            return ImageGenService(
+                pipeline_factory=params.pop("pipeline_factory"),
+                controlnet_params_factory=params.pop("controlnet_params_factory"),
+                local_debug=self.use_debug_mode_for_service
+            )
+        except KeyError as e:
+            return None
 
 
 
@@ -81,7 +88,8 @@ if __name__ == "__main__":
         help="Flag to start the API server.",
     )
     parser.add_argument(
-        "--rp_api_port", type=int, default=8000, help="Port to start the FastAPI server on."
+        "--rp_api_port", 
+        type=int, default=8000, help="Port to start the FastAPI server on."
     )
     # Test input
     parser.add_argument(
@@ -89,6 +97,13 @@ if __name__ == "__main__":
         type=str,
         default=None,
         help="Test input for the worker, formatted as JSON.",
+    )
+    # Local debug mode - save images as output files
+    parser.add_argument(
+        "--local_debug_mode",
+        action="store_true",
+        default=False,
+        help="Local debug mode - save images as output files"
     )
 
     args = parser.parse_args()
@@ -105,7 +120,8 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Failed to load manifest file given path: {manifest_path}. Error: {e}")
 
-    handler_type = get_handler_type_from_manifest(manifest)
+    manifest_handler = Manifest(manifest, args)
+    handler_type = manifest_handler.get_handler_type_from_manifest()
 
     service = None
     if handler_type == "wan22":
@@ -113,9 +129,10 @@ if __name__ == "__main__":
     if handler_type == "ltxv":
         service = LTXVideoService()
     else: 
-        service = get_service_from_manifest(manifest)
+        service = manifest_handler.get_service_from_manifest()
 
     if service is not None:
+        print(f"Starting handler. Debug mode: {args.local_debug_mode}")
         svc = service
         svc.warmup()
         def handler(job):
